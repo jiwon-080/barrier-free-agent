@@ -22,8 +22,8 @@ barrier-free-agent/
 │   ├── eval/                  # 테스트 정답지 (예: golden_set_nh_bank.json)
 │   └── rag/                   # 금융 용어사전, 올원뱅크 IRP 약관 텍스트 파일들
 │
-├── ui/                        # 🎨 [프론트엔드] 사용자가 보는 화면 (추가할 폴더)
-│   ├── app.py                 # Streamlit 실행의 진입점 (메인 화면)
+├── ui/                        # 🎨 [프론트엔드] 사용자가 보는 화면 데모
+│   ├── demo.py                 # Streamlit 실행의 진입점 (메인 화면)
 │   └── assets/                # 농협 어플 스크린샷 이미지 등 시각 자료
 │
 ├── .env                       # 🔑 비밀키 보관소 (Gemini API Key 등)
