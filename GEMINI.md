@@ -50,6 +50,7 @@ Ask the user: Option A (simple single-project) or Option B (full CI/CD pipeline 
 
 ## Operational Guidelines for Coding Agents
 
+- **Project Status Tracking**: Always check `memory.md` for project context and architectural decisions, and `agentops_todo.md` for the current task status and progress. These files are the primary source of truth for the development state.
 - **Code preservation**: Only modify code directly targeted by the user's request. Preserve all surrounding code, config values (e.g., `model`), comments, and formatting.
 - **NEVER change the model** unless explicitly asked. Use `gemini-3-flash-preview` or `gemini-3-pro-preview` for new agents.
 - **Model 404 errors**: Fix `GOOGLE_CLOUD_LOCATION` (e.g., `global` instead of `us-central1`), not the model name.
