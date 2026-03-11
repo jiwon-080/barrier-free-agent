@@ -1,0 +1,10 @@
+[
+  {
+    "input": "올원뱅크에서 송금하는 방법 알려줘",
+    "expected_output": "메인 화면에서 '송금' 버튼을 누르고 계좌번호를 입력하세요."
+  },
+  {
+    "input": "IRP가 뭐야?",
+    "expected_output": "개인형 퇴직연금(Individual Retirement Pension)을 의미합니다."
+  }
+]
