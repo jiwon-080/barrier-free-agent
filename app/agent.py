@@ -23,9 +23,15 @@ from google.genai import types
 
 import os
 import google.auth
+from google.auth import exceptions
 
-_, project_id = google.auth.default()
-os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
+try:
+    _, project_id = google.auth.default()
+except exceptions.DefaultCredentialsError:
+    project_id = "placeholder-project-id"
+    print("Warning: Google Cloud credentials not found. Using placeholder project ID for local development.")
+
+os.environ["GOOGLE_CLOUD_PROJECT"] = project_id or "placeholder-project-id"
 os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
