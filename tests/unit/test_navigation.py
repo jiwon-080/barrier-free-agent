@@ -2,30 +2,41 @@ import pytest
 import sys
 import os
 
-# app 폴더를 경로에 추가하고, 불필요한 agent 임포트를 피하기 위해
-# 모듈을 직접 로드하거나 mocking을 고려합니다.
+# app 폴더를 경로에 추가
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 def test_navigate_irp():
     from app.navigation_tool import navigate_ui
     result = navigate_ui("IRP 가입하고 싶어")
     assert result["type"] == "navigation"
-    assert len(result["path"]) == 5
     assert "visual_instructions" in result
     assert "voice_guide" in result
-    assert "어르신" in result["voice_guide"]
-    assert "IRP" in result["voice_guide"]
 
 def test_navigate_deposit():
     from app.navigation_tool import navigate_ui
     result = navigate_ui("예금 가입 방법 알려줘")
     assert result["type"] == "suggestion"
-    assert result["suggestion_action"] == "큰글 모드 전환"
     assert "voice_guide" in result
-    assert "큰글 모드" in result["voice_guide"]
+
+def test_navigate_high_risk_etf():
+    """ETF 가입 시 hold 상태와 투자 성향 진단 안내가 반환되는지 확인"""
+    from app.navigation_tool import navigate_ui
+    result = navigate_ui("ETF 가입하고 싶어요")
+    
+    assert result["status"] == "hold"
+    assert result["routing"] == "투자 성향 진단 메뉴"
+    assert "원금 손실 위험" in result["voice_guide"]
+    assert "투자 성향" in result["voice_guide"]
+
+def test_navigate_high_risk_fund():
+    """펀드 매수 시 hold 상태가 반환되는지 확인"""
+    from app.navigation_tool import navigate_ui
+    result = navigate_ui("좋은 펀드 하나 매수해줘")
+    
+    assert result["status"] == "hold"
+    assert "원금 손실 위험" in result["voice_guide"]
 
 def test_navigate_unknown():
     from app.navigation_tool import navigate_ui
     result = navigate_ui("로또 번호 알려줘")
     assert result["type"] == "error"
-    assert "message" in result

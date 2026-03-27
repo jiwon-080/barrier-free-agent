@@ -13,73 +13,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
-from zoneinfo import ZoneInfo
+# app/agent.py
 
+import os
+import google.auth
 from google.adk.agents import Agent
 from google.adk.apps import App
 from google.adk.models import Gemini
 from google.genai import types
 
-import os
-import google.auth
-from google.auth import exceptions
+# 미리 만들어둔 배리어프리 도구들 가져오기
+from .navigation_tool import navigate_ui
+from .literacy_tool import explain_financial_term
+from .guardrail_tool import check_investment_guardrail
 
-try:
-    _, project_id = google.auth.default()
-except exceptions.DefaultCredentialsError:
-    project_id = "placeholder-project-id"
-    print("Warning: Google Cloud credentials not found. Using placeholder project ID for local development.")
-
-os.environ["GOOGLE_CLOUD_PROJECT"] = project_id or "placeholder-project-id"
+_, project_id = google.auth.default()
+os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
 os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
-
-def get_weather(query: str) -> str:
-    """Simulates a web search. Use it get information on weather.
-
-    Args:
-        query: A string containing the location to get weather information for.
-
-    Returns:
-        A string with the simulated weather information for the queried location.
-    """
-    if "sf" in query.lower() or "san francisco" in query.lower():
-        return "It's 60 degrees and foggy."
-    return "It's 90 degrees and sunny."
-
-
-def get_current_time(query: str) -> str:
-    """Simulates getting the current time for a city.
-
-    Args:
-        city: The name of the city to get the current time for.
-
-    Returns:
-        A string with the current time information.
-    """
-    if "sf" in query.lower() or "san francisco" in query.lower():
-        tz_identifier = "America/Los_Angeles"
-    else:
-        return f"Sorry, I don't have timezone information for query: {query}."
-
-    tz = ZoneInfo(tz_identifier)
-    now = datetime.datetime.now(tz)
-    return f"The current time for query {query} is {now.strftime('%Y-%m-%d %H:%M:%S %Z%z')}"
-
-
-root_agent = Agent(
-    name="root_agent",
+# 배리어프리 에이전트 정의
+barrier_free_agent = Agent(
+    name="barrier_free_financial_agent",
     model=Gemini(
         model="gemini-3-flash-preview",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
-    instruction="You are a helpful AI assistant designed to provide accurate and useful information.",
-    tools=[get_weather, get_current_time],
+    instruction="""
+    당신은 농협 은행 앱을 사용하는 노년층과 금융 초보자(주린이)를 돕는 친절하고 전문적인 안내원입니다.
+    
+    [핵심 지침]
+    1. 답변은 항상 경어체를 사용하고, 문장은 짧고 이해하기 쉬운 단어로 구성하세요.
+    2. 사용자가 어려운 금융 용어(예: ETF, IRP, 수익률 등)를 물어보면 'explain_financial_term' 도구를 사용하여 쉬운 말로 풀어서 설명하세요.
+    3. 사용자가 앱 내 특정 메뉴(송금, 상품 가입 등)를 찾거나 길을 잃은 것 같으면 'navigate_ui' 도구를 사용하여 화면 이동을 안내하세요.
+    4. 사용자가 특정 상품을 사야 하는지 묻거나 투자를 고민할 때는 절대 직접적인 투자를 권유해선 안 됩니다. 반드시 'check_investment_guardrail' 도구를 사용하여 금융소비자보호법을 준수하고, 객관적인 상품 설명만 제공하세요.
+    """,
+    tools=[navigate_ui, explain_financial_term, check_investment_guardrail], # 에이전트 도구 목록
 )
 
 app = App(
-    root_agent=root_agent,
-    name="app",
+    root_agent=barrier_free_agent,
+    name="barrier_free_app",
 )

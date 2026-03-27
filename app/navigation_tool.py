@@ -4,9 +4,18 @@ def navigate_ui(query: str) -> Dict[str, Any]:
     """어르신들을 위해 NH올원뱅크 앱의 화면 이동 경로를 안내합니다.
     
     Args:
-        query: 사용자의 요청 (예: 'IRP 가입', '예금 가입')
+        query: 사용자의 요청 (예: 'IRP 가입', '예금 가입', 'ETF 가입')
     """
-    if "IRP" in query or "퇴직연금" in query:
+    # [고위험 상품군] - 의도된 마찰 및 투자 쿨다운
+    if any(keyword in query for keyword in ["ETF", "펀드", "주식", "투자", "매수"]):
+        return {
+            "status": "hold",
+            "routing": "투자 성향 진단 메뉴",
+            "voice_guide": "이 상품은 원금 손실 위험이 있습니다. 가입 전에 본인의 투자 성향을 먼저 확인해 볼까요?"
+        }
+    
+    # [일반 경로] - 기존 로직 유지
+    elif "IRP" in query or "퇴직연금" in query:
         return {
             "type": "navigation",
             "path": ["메인 화면", "전체 메뉴(우측 상단 ≡)", "금융상품(좌측 탭)", "퇴직연금", "퇴직연금(IRP) 가입"],
