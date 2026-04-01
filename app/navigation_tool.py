@@ -1,46 +1,88 @@
-from typing import Dict, Any
+def navigate_ui(screen_name: str) -> dict:
+    """노년층 사용자를 위해 목적지 화면의 route와 음성 안내를 반환합니다.
+    에이전트가 동의를 구한 후 해당 route로 직접 이동합니다.
 
-def navigate_ui(query: str) -> Dict[str, Any]:
-    """어르신들을 위해 NH올원뱅크 앱의 화면 이동 경로를 안내합니다.
-    
     Args:
-        query: 사용자의 요청 (예: 'IRP 가입', '예금 가입', 'ETF 가입')
+        screen_name: 이동하고자 하는 화면 또는 기능 설명 (예: 'IRP 가입', 'MY퇴직연금', 'ETF')
+
+    Returns:
+        type='navigation' : route, consent_message, voice_guide, highlight_target
+        status='hold'     : 고위험 상품 — 투자 성향 진단 유도
+        type='suggestion' : 추가 맥락 필요 (예: IRP 내 예금 운용)
+        type='error'      : 알 수 없는 요청
     """
-    # [고위험 상품군] - 의도된 마찰 및 투자 쿨다운
-    if any(keyword in query for keyword in ["ETF", "펀드", "주식", "투자", "매수"]):
+    upper = screen_name.upper()
+
+    # ── 1. 고위험 상품 → hold (의도된 마찰) ────────────────────────────────
+    if "ETF" in upper or "펀드" in screen_name or "FUND" in upper:
         return {
             "status": "hold",
             "routing": "투자 성향 진단 메뉴",
-            "voice_guide": "이 상품은 원금 손실 위험이 있습니다. 가입 전에 본인의 투자 성향을 먼저 확인해 볼까요?"
+            "route": "investment_diagnosis",
+            "voice_guide": (
+                "ETF나 펀드는 원금 손실 위험이 있는 고위험 상품이에요. "
+                "바로 가입하시기 전에 투자 성향 진단을 먼저 받아보셔야 해요. "
+                "진단 화면으로 이동해 드릴까요?"
+            ),
+            "highlight_target": "투자 성향 진단",
         }
-    
-    # [일반 경로] - 기존 로직 유지
-    elif "IRP" in query or "퇴직연금" in query:
-        return {
+
+    # ── 2. 직접 이동 가능한 주요 화면 ──────────────────────────────────────
+    navigation_map = {
+        "IRP": {
             "type": "navigation",
-            "path": ["메인 화면", "전체 메뉴(우측 상단 ≡)", "금융상품(좌측 탭)", "퇴직연금", "퇴직연금(IRP) 가입"],
-            "visual_instructions": [
-                {"step": 1, "action": "우측 상단 '≡' 버튼 클릭", "location": "오른쪽 위", "color": "검정색"},
-                {"step": 2, "action": "좌측 메뉴에서 '금융상품' 탭 클릭", "location": "왼쪽 세로 메뉴", "color": "초록색 강조"},
-                {"step": 3, "action": "리스트에서 '퇴직연금' 클릭", "location": "중앙 리스트", "color": "기본"},
-                {"step": 4, "action": "세부 메뉴에서 '퇴직연금(IRP)' 클릭", "location": "중앙 리스트", "color": "기본"},
-                {"step": 5, "action": "'퇴직연금(IRP) 가입' 버튼 클릭", "location": "화면 하단", "color": "파란색 강조"}
-            ],
-            "voice_guide": "어르신, IRP 가입 화면을 찾으시는군요? 화면 오른쪽 맨 위에 있는 줄 세 개 버튼을 먼저 눌러보시겠어요? 그 다음 왼쪽에서 '금융상품'을 누르시고, 순서대로 따라오시면 제가 끝까지 도와드릴게요. 천천히 하셔도 됩니다."
-        }
-    
-    elif "예금" in query or "적금" in query:
+            "route": "irp_tax_saving",
+            "consent_message": "IRP 세액공제용 가입 화면으로 바로 이동해 드릴까요?",
+            "voice_guide": (
+                "IRP 가입 화면으로 안내해 드릴게요. "
+                "원래는 금융상품 → 퇴직연금 → IRP 신규가입 순으로 4단계를 직접 눌러야 하는데, "
+                "제가 한 번에 이동해 드릴게요."
+            ),
+            "highlight_target": "개인형 IRP 세액공제용",
+        },
+        "MY퇴직연금": {
+            "type": "navigation",
+            "route": "my_pension",
+            "consent_message": "내 퇴직연금 현황 화면으로 바로 이동해 드릴까요?",
+            "voice_guide": "내 연금 현황 화면으로 이동해 드릴게요.",
+            "highlight_target": "MY퇴직연금",
+        },
+        "포트폴리오": {
+            "type": "navigation",
+            "route": "portfolio",
+            "consent_message": "포트폴리오 화면으로 바로 이동해 드릴까요?",
+            "voice_guide": "포트폴리오 화면으로 이동해 드릴게요.",
+            "highlight_target": "포트폴리오",
+        },
+        "연금설계": {
+            "type": "navigation",
+            "route": "pension_design",
+            "consent_message": "연금설계 화면으로 바로 이동해 드릴까요?",
+            "voice_guide": "연금설계 화면으로 이동해 드릴게요.",
+            "highlight_target": "연금설계",
+        },
+    }
+
+    for key, nav_info in navigation_map.items():
+        if key in screen_name or key in upper:
+            return nav_info
+
+    # ── 3. IRP 내 운용상품(예금 등) → suggestion ────────────────────────────
+    if "예금" in screen_name or "적금" in screen_name:
         return {
             "type": "suggestion",
-            "suggestion_action": "큰글 모드 전환",
-            "visual_instructions": [
-                {"step": 1, "action": "상단 '큰글' 토글 스위치 클릭", "location": "화면 최상단 중앙", "color": "회색에서 초록색으로 변경됨"}
-            ],
-            "voice_guide": "어르신, 예금 가입은 글씨가 큰 '큰글 모드'에서 하시는 게 훨씬 눈이 편하실 거예요. 화면 맨 위에 있는 '큰글' 버튼을 한 번 눌러보시겠어요? 그러면 제가 더 보기 쉽게 예금 가입을 도와드릴게요."
+            "voice_guide": (
+                "예금 상품은 IRP 계좌 안에서 운용하는 방식이에요. "
+                "IRP 계좌가 있으시면 바로 운용 상품 화면으로 안내해 드릴게요. "
+                "혹시 IRP 계좌가 없으신가요?"
+            ),
         }
-    
+
+    # ── 4. 알 수 없는 요청 ──────────────────────────────────────────────────
     return {
         "type": "error",
-        "message": "죄송합니다. 요청하신 기능의 위치를 찾지 못했습니다.",
-        "voice_guide": "죄송해요, 어르신. 제가 그 기능이 어디 있는지 아직 공부를 더 해야 할 것 같아요. 'IRP 가입'이나 '예금 가입'처럼 다시 한 번 말씀해 주시겠어요?"
+        "voice_guide": (
+            f"죄송해요, '{screen_name}'에 대한 화면을 찾지 못했어요. "
+            "'IRP 가입'이나 '내 연금 현황'처럼 말씀해 주시겠어요?"
+        ),
     }

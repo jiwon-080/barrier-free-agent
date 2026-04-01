@@ -27,10 +27,15 @@ from .navigation_tool import navigate_ui
 from .literacy_tool import explain_financial_term
 from .guardrail_tool import check_investment_guardrail
 
-_, project_id = google.auth.default()
-os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
-os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
-os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
+if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+    try:
+        _, project_id = google.auth.default()
+        if project_id:
+            os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
+    except Exception:
+        pass  # 로컬/테스트 환경에서는 GCP 인증 없이 진행
+os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "global")
+os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "True")
 
 # 배리어프리 에이전트 정의
 barrier_free_agent = Agent(

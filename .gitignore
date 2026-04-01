@@ -1,5 +1,8 @@
 memory.md
+GEMINI.md
+CLAUDE.md
 data/images/
+.claude/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
