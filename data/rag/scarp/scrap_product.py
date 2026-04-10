@@ -18,14 +18,21 @@ FSS_API_KEY = os.getenv("FSS_API_KEY")
 BASE_URL = "http://finlife.fss.or.kr/finlifeapi"
 OUTPUT_PATH = Path(__file__).parent.parent / "fss_product.json"
 
-# 은행권 코드
-TOP_FIN_GRP_NO = "020000"
+# 금융권역 코드
+FIN_GRP = {
+    "bank":       "020000",  # 은행
+    "investment": "060000",  # 금융투자 (증권/자산운용)
+    "insurance":  "060000",  # 생명보험 (annuity 조회 시)
+    "saving_bank":"030300",  # 저축은행
+}
 
+# (엔드포인트, topFinGrpNo) - 상품 유형별로 조회 금융권역이 다름
+# annuity/isa 엔드포인트는 FSS API에서 폐지됨 → 제거
 ENDPOINTS = {
-    "deposit": f"{BASE_URL}/depositProductsSearch.json",    # 예금
-    "saving":  f"{BASE_URL}/savingProductsSearch.json",     # 적금
-    "annuity": f"{BASE_URL}/annuityProductsSearch.json",    # 연금저축
-    "isa":     f"{BASE_URL}/isaProductsSearch.json",        # ISA
+    "deposit_bank":   (f"{BASE_URL}/depositProductsSearch.json", "020000"),  # 예금: 은행
+    "deposit_save":   (f"{BASE_URL}/depositProductsSearch.json", "030300"),  # 예금: 저축은행
+    "saving_bank":    (f"{BASE_URL}/savingProductsSearch.json",  "020000"),  # 적금: 은행
+    "saving_save":    (f"{BASE_URL}/savingProductsSearch.json",  "030300"),  # 적금: 저축은행
 }
 
 # 수집할 baseList 필드
@@ -51,7 +58,7 @@ OPTION_FIELDS = [
 ]
 
 
-def fetch_products(product_type: str, endpoint: str) -> tuple[list, list]:
+def fetch_products(product_type: str, endpoint: str, top_fin_grp_no: str) -> tuple[list, list]:
     """FSS API에서 전체 페이지 수집 후 baseList, optionList 반환"""
     all_base = []
     all_options = []
@@ -60,7 +67,7 @@ def fetch_products(product_type: str, endpoint: str) -> tuple[list, list]:
     while True:
         params = {
             "auth": FSS_API_KEY,
-            "topFinGrpNo": TOP_FIN_GRP_NO,
+            "topFinGrpNo": top_fin_grp_no,
             "pageNo": page,
         }
         try:
@@ -115,9 +122,9 @@ def merge_products(base_list: list, option_list: list) -> list:
 def main():
     output = {}
 
-    for product_type, endpoint in ENDPOINTS.items():
-        print(f"\n[{product_type}] 수집 중...")
-        base_list, option_list = fetch_products(product_type, endpoint)
+    for product_type, (endpoint, top_fin_grp_no) in ENDPOINTS.items():
+        print(f"\n[{product_type}] 수집 중... (권역코드: {top_fin_grp_no})")
+        base_list, option_list = fetch_products(product_type, endpoint, top_fin_grp_no)
         merged = merge_products(base_list, option_list)
         output[product_type] = merged
         print(f"  -> 총 {len(merged)}개 상품 수집 완료")
@@ -128,10 +135,8 @@ def main():
 
     total = sum(len(v) for v in output.values())
     print(f"\n✅ 저장 완료: {OUTPUT_PATH}")
-    print(f"   총 {total}개 상품 (예금: {len(output.get('deposit',[]))}, "
-          f"적금: {len(output.get('saving',[]))}, "
-          f"연금저축: {len(output.get('annuity',[]))}, "
-          f"ISA: {len(output.get('isa',[]))})")
+    for k, v in output.items():
+        print(f"   {k}: {len(v)}개")
 
 
 if __name__ == "__main__":
