@@ -5,6 +5,7 @@ from typing import Optional
 # 프로젝트 루트 디렉토리를 기준으로 데이터 파일 경로 설정
 BASE_DIR = Path(__file__).parent.parent
 GLOSSARY_PATH = BASE_DIR / "data" / "rag" / "fss_glossary.json"
+KRX_ETF_PATH  = BASE_DIR / "data" / "rag" / "krx_etf_info.json"  # scrap_krx.py가 생성
 
 def _load_glossary():
     # 기본 목업 데이터
@@ -13,16 +14,29 @@ def _load_glossary():
         {"term": "정기예금", "official_definition": "일정 기간 돈을 맡기고 이자를 받는 예금입니다."},
         {"term": "RP", "official_definition": "환매조건부채권으로, 일정 기간 후 다시 사는 조건으로 발행하는 채권입니다."}
     ]
-    
+
+    # 1) 금융감독원 파인 사전
     try:
         with open(GLOSSARY_PATH, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
-            # 주석(예: __comment) 등을 제외하고 실제 용어 데이터만 필터링
-            file_data = [item for item in data if isinstance(item, dict) and "term" in item]
-            # 목업 데이터와 파일 데이터를 합침 (파일 데이터 우선)
-            return file_data + mock_data
+            fss_data = [item for item in data if isinstance(item, dict) and "term" in item]
     except (FileNotFoundError, json.JSONDecodeError):
-        return mock_data
+        fss_data = []
+
+    # 2) KRX ETF 종목 사전 (scrap_krx.py 실행 후 생성)
+    try:
+        with open(KRX_ETF_PATH, "r", encoding="utf-8") as f:
+            krx_data = json.load(f)
+            krx_data = [item for item in krx_data if isinstance(item, dict) and "term" in item]
+    except (FileNotFoundError, json.JSONDecodeError):
+        krx_data = []
+
+    # 우선순위: FSS 용어 > KRX ETF > 목업
+    # FSS에 동일 term이 있으면 KRX 항목은 건너뜀 (금융용어 정의가 우선)
+    fss_terms = {item["term"] for item in fss_data}
+    krx_unique = [item for item in krx_data if item["term"] not in fss_terms]
+
+    return fss_data + krx_unique + mock_data
 
 GLOSSARY_DATA = _load_glossary()
 
@@ -43,15 +57,20 @@ def explain_financial_term(term: str) -> str:
         match = next((item for item in GLOSSARY_DATA if term in item.get("term", "")), None)
         
     if match:
-        found_term = match['term']
-        definition = match.get("official_definition", "정의를 찾을 수 없습니다.")
-        
+        found_term  = match["term"]
+        definition  = match.get("official_definition", "정의를 찾을 수 없습니다.")
+        risk_level  = match.get("risk_level", "")   # KRX ETF 항목에만 존재
+        source      = match.get("source", "")
+
+        # KRX ETF 항목이면 위험등급을 헤더에 표시
+        risk_header = f" — 위험등급: {risk_level}" if risk_level else ""
+
         # '대칭적 해설 원칙' 적용 (수익/구조 5 : 리스크 5)
-        # 실제 운영 환경에서는 LLM이 이 가이드를 바탕으로 문장을 생성하게 되며, 
+        # 실제 운영 환경에서는 LLM이 이 가이드를 바탕으로 문장을 생성하게 되며,
         # 도구 레벨에서는 핵심 구조와 리스크 경고를 명시적으로 포함합니다.
-        
+
         explanation = (
-            f"### [{found_term}] 에 대한 설명\n\n"
+            f"### [{found_term}]{risk_header} 에 대한 설명\n\n"
             f"**1. 수익 및 구조 (수익성):**\n"
             f"{definition}\n\n"
             f"**2. 최대 리스크 (위험성):**\n"
