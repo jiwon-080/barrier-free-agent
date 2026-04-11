@@ -257,7 +257,7 @@ def build_graph() -> nx.DiGraph:
     G = nx.DiGraph()
 
     # ── 1. TermNode: fss_glossary.json 로드 ──────────────────────────────
-    with open(DATA_DIR / "rag" / "fss_glossary.json", encoding="utf-8-sig") as f:
+    with open(DATA_DIR / "rag" / "fss_bok_glossary.json", encoding="utf-8-sig") as f:
         glossary = [item for item in json.load(f) 
                     if isinstance(item, dict) and "term" in item]
 
