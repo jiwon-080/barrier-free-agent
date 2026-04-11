@@ -2,6 +2,7 @@ memory.md
 GEMINI.md
 CLAUDE.md
 data/images/
+data/rag/*.pdf
 .claude/
 
 # Byte-compiled / optimized / DLL files
