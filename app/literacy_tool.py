@@ -4,7 +4,7 @@ from typing import Optional
 
 # 프로젝트 루트 디렉토리를 기준으로 데이터 파일 경로 설정
 BASE_DIR = Path(__file__).parent.parent
-GLOSSARY_PATH = BASE_DIR / "data" / "rag" / "fss_glossary.json"
+GLOSSARY_PATH = BASE_DIR / "data" / "rag" / "fss_bok_glossary.json"
 KRX_ETF_PATH  = BASE_DIR / "data" / "rag" / "krx_etf_info.json"  # scrap_krx.py가 생성
 
 def _load_glossary():
