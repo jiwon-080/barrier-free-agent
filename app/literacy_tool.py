@@ -7,6 +7,9 @@ BASE_DIR = Path(__file__).parent.parent
 GLOSSARY_PATH = BASE_DIR / "data" / "rag" / "fss_bok_glossary.json"
 KRX_ETF_PATH  = BASE_DIR / "data" / "rag" / "krx_etf_info.json"  # scrap_krx.py가 생성
 
+# GraphRAG 사용 가능 여부 (knowledge_graph.pkl 존재 시 활성화)
+_GRAPH_AVAILABLE = (BASE_DIR / "data" / "rag" / "knowledge_graph.pkl").exists()
+
 def _load_glossary():
     # 기본 목업 데이터
     mock_data = [
@@ -42,42 +45,94 @@ GLOSSARY_DATA = _load_glossary()
 
 def explain_financial_term(term: str) -> str:
     """주린이(초보 투자자)를 위해 어려운 금융 용어를 '대칭적 해설 원칙'에 따라 설명합니다.
-    
+
+    GraphRAG가 활성화된 경우 지식 그래프 기반 multi-hop 탐색 결과를 우선 사용하고,
+    없을 경우 기존 키워드 매칭 방식으로 폴백합니다.
+
     Args:
         term: 설명을 원하는 금융 용어
-        
+
     Returns:
         수익/구조와 리스크가 5:5 비율로 포함된 설명 문자열
     """
-    # 정확히 일치하는 용어 검색
+    # ── 1) GraphRAG 우선 탐색 ──────────────────────────────────────────────
+    if _GRAPH_AVAILABLE:
+        try:
+            from app.graph_rag_tool import graph_search
+            gr = graph_search(term, depth=2)
+            if gr.get("matched_term"):
+                return _format_graph_result(gr)
+        except Exception:
+            pass  # 그래프 오류 시 폴백
+
+    # ── 2) 폴백: 기존 키워드 매칭 ─────────────────────────────────────────
+    return _legacy_keyword_search(term)
+
+
+def _format_graph_result(gr: dict) -> str:
+    """GraphRAG 탐색 결과를 '대칭적 해설 원칙' 형식으로 포맷합니다."""
+    found_term = gr["matched_term"]
+    definition = gr["definition"] or "정의를 찾을 수 없습니다."
+    related = ", ".join(gr["related_terms"][:3]) if gr["related_terms"] else ""
+    reg_hint = gr["regulation_hint"] or ""
+    route = gr["suggested_route"] or ""
+    guardrail = gr["guardrail"]
+
+    lines = [
+        f"### [{found_term}] 에 대한 설명\n",
+        f"**1. 수익 및 구조 (수익성):**\n{definition}\n",
+    ]
+
+    if reg_hint:
+        # regulation_hint가 길 경우 앞 200자만 표시
+        short_hint = reg_hint[:200] + ("..." if len(reg_hint) > 200 else "")
+        lines.append(f"**관련 규정:** {short_hint}\n")
+
+    if related:
+        lines.append(f"**연관 개념:** {related}\n")
+
+    if route:
+        lines.append(f"**앱 화면 안내:** '{route}' 화면에서 확인하실 수 있습니다.\n")
+
+    risk_msg = (
+        "⚠️ 이 상품은 투자 성향 진단이 필요한 고위험 상품입니다. 투자 전 반드시 성향 진단을 받으세요."
+        if guardrail
+        else (
+            f"모든 금융 상품은 수익의 기회와 함께 손실의 위험도 가지고 있습니다. "
+            f"시장의 변동이나 예상치 못한 경제 상황에 따라 원금의 일부 또는 전부를 잃을 수 있는 "
+            f"'원금 손실 위험(Risk)'이 존재함을 반드시 기억하셔야 합니다. "
+            f"특히 '{found_term}' 관련 투자를 결정하시기 전에는 본인의 투자 성향과 손실 감내 수준을 꼭 확인해 보세요."
+        )
+    )
+    lines.append(f"**2. 최대 리스크 (위험성):**\n{risk_msg}")
+
+    return "\n".join(lines)
+
+
+def _legacy_keyword_search(term: str) -> str:
+    """기존 키워드 매칭 방식 (GraphRAG 폴백)"""
     match = next((item for item in GLOSSARY_DATA if item.get("term") == term), None)
-    
-    # 일치하는 용어가 없으면 부분 검색 시도
     if not match:
         match = next((item for item in GLOSSARY_DATA if term in item.get("term", "")), None)
-        
-    if match:
-        found_term  = match["term"]
-        definition  = match.get("official_definition", "정의를 찾을 수 없습니다.")
-        risk_level  = match.get("risk_level", "")   # KRX ETF 항목에만 존재
-        source      = match.get("source", "")
 
-        # KRX ETF 항목이면 위험등급을 헤더에 표시
+    if match:
+        found_term = match["term"]
+        definition = match.get("official_definition", "정의를 찾을 수 없습니다.")
+        risk_level = match.get("risk_level", "")
         risk_header = f" — 위험등급: {risk_level}" if risk_level else ""
 
-        # '대칭적 해설 원칙' 적용 (수익/구조 5 : 리스크 5)
-        # 실제 운영 환경에서는 LLM이 이 가이드를 바탕으로 문장을 생성하게 되며,
-        # 도구 레벨에서는 핵심 구조와 리스크 경고를 명시적으로 포함합니다.
-
-        explanation = (
+        return (
             f"### [{found_term}]{risk_header} 에 대한 설명\n\n"
             f"**1. 수익 및 구조 (수익성):**\n"
             f"{definition}\n\n"
             f"**2. 최대 리스크 (위험성):**\n"
             f"모든 금융 상품은 수익의 기회와 함께 손실의 위험도 가지고 있습니다. "
-            f"시장의 변동이나 예상치 못한 경제 상황에 따라 원금의 일부 또는 전부를 잃을 수 있는 '원금 손실 위험(Risk)'이 존재함을 반드시 기억하셔야 합니다. "
+            f"시장의 변동이나 예상치 못한 경제 상황에 따라 원금의 일부 또는 전부를 잃을 수 있는 "
+            f"'원금 손실 위험(Risk)'이 존재함을 반드시 기억하셔야 합니다. "
             f"특히 '{found_term}' 관련 투자를 결정하시기 전에는 본인의 투자 성향과 손실 감내 수준을 꼭 확인해 보세요."
         )
-        return explanation
-    
-    return f"죄송합니다. '{term}'에 대한 정보를 사전에서 찾을 수 없습니다. 하지만 모든 금융 거래는 수익과 손실의 가능성이 항상 공존한다는 점을 유의해 주세요."
+
+    return (
+        f"죄송합니다. '{term}'에 대한 정보를 사전에서 찾을 수 없습니다. "
+        f"하지만 모든 금융 거래는 수익과 손실의 가능성이 항상 공존한다는 점을 유의해 주세요."
+    )

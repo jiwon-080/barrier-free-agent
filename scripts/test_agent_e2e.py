@@ -93,6 +93,52 @@ def step2_tools():
         except Exception as e:
             print(f"  [FAIL] {e}")
 
+    # GraphRAG 직접 호출 케이스
+    _step2_graph_rag(base)
+
+
+# ─────────────────────────────────────────────
+# STEP 2b: GraphRAG 도구 직접 호출 확인
+# ─────────────────────────────────────────────
+def _step2_graph_rag(base: str):
+    """graph_rag_tool.graph_search 직접 호출 테스트"""
+    print(f"\n{SEP}\n[graph_search - GraphRAG]")
+
+    graph_tool_path = os.path.join(base, "app", "graph_rag_tool.py")
+    try:
+        mod = _load_tool(graph_tool_path, "graph_rag_tool")
+    except Exception as e:
+        print(f"  [FAIL] 모듈 로드 실패: {e}")
+        return
+
+    GRAPH_CASES = [
+        # (쿼리, 검증 함수, 설명)
+        ("IRP",     lambda r: bool(r.get("matched_term")),         "matched_term 존재"),
+        ("세액공제", lambda r: bool(r.get("definition")),           "definition 존재"),
+        ("ETF",     lambda r: isinstance(r.get("related_terms"), list), "related_terms 리스트"),
+        ("펀드",    lambda r: r.get("matched_term") is not None or r.get("definition") != "", "매칭 또는 정의 존재"),
+        ("존재하지않는용어XYZ", lambda r: r.get("matched_term") is None, "미매칭 시 matched_term=None"),
+    ]
+
+    for query, check, desc in GRAPH_CASES:
+        try:
+            result = mod.graph_search(query, depth=2)
+            ok = check(result)
+            status = "[OK]" if ok else "[FAIL]"
+            matched = result.get("matched_term") or "(없음)"
+            definition_preview = (result.get("definition") or "")[:80].replace("\n", " ")
+            related = result.get("related_terms", [])[:3]
+            route = result.get("suggested_route") or "-"
+            guardrail = result.get("guardrail", False)
+            print(
+                f"  {status} query='{query}' | 검증: {desc}\n"
+                f"       matched={matched} | route={route} | guardrail={guardrail}\n"
+                f"       definition={definition_preview!r}\n"
+                f"       related={related}"
+            )
+        except Exception as e:
+            print(f"  [FAIL] query='{query}' | 예외: {e}")
+
 
 # ─────────────────────────────────────────────
 # STEP 3: ADK 에이전트 통합 호출
