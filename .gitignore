@@ -2,7 +2,6 @@ memory.md
 app/.adk/
 data/images/
 data/rag/*.pdf
-data/rag/*.pkl
 .claude/
 
 # Byte-compiled / optimized / DLL files
