@@ -2,10 +2,16 @@
 NH 배리어프리 에이전트 — 로컬 데모
 실행: uv run streamlit run ui/demo.py
 """
+import io
 import sys
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
+from google.adk.agents.run_config import RunConfig, StreamingMode
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from google.genai import types as genai_types
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.navigation_tool import navigate_ui
@@ -18,7 +24,7 @@ NH_HIGHLIGHT = "#FF6B00"
 NH_CSS = f"""
 <style>
 /* 본문 여백 최소화 및 모바일 너비 시뮬레이션 */
-.block-container {{ padding: 1rem 0 4rem 0 !important; max-width: 440px !important; }}
+.block-container {{ padding: 1rem 0 80px 0 !important; max-width: 440px !important; }}
 header {{ display: none !important; }}
 
 /* 메뉴 항목 */
@@ -47,20 +53,327 @@ header {{ display: none !important; }}
 
 /* Streamlit 버튼 전체 너비 기본화 */
 div[data-testid="stHorizontalBlock"] .stButton button {{ width: 100%; }}
+
+/* 금융상품 그리드 버튼 — 아이콘+라벨 줄바꿈, 카드 높이 */
+div[data-testid="stHorizontalBlock"] .stButton button {{
+    white-space: pre-wrap;
+    line-height: 1.5;
+}}
+div[data-testid="stHorizontalBlock"] .stButton button p {{
+    white-space: pre-wrap;
+}}
+
+/* 홈 배너 버튼 */
+button[data-testid="baseButton-secondary"][key="home_agent_banner"],
+div:has(> button[key="home_agent_banner"]) button {{
+    border: 2px solid {NH_GREEN} !important;
+    border-radius: 24px !important;
+    color: {NH_GREEN} !important;
+    background: white !important;
+    font-size: 15px !important;
+    font-weight: bold !important;
+    padding: 12px 20px !important;
+    box-shadow: none !important;
+}}
 </style>
 """
 
+# ── FAB + 바텀시트 다이얼로그 CSS ─────────────────────────────────────────────
+DIALOG_CSS = f"""
+<style>
+/* ── FAB 플로팅 버튼 ── */
+.fab-wrapper {{
+    position: fixed;
+    bottom: 76px;
+    right: 20px;
+    z-index: 1000;
+}}
+.fab-wrapper button {{
+    width: 58px !important;
+    height: 58px !important;
+    border-radius: 50% !important;
+    background-color: {NH_GREEN} !important;
+    color: white !important;
+    font-size: 22px !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    border: none !important;
+    box-shadow: 0 4px 18px rgba(0,165,80,0.45) !important;
+    min-height: unset !important;
+    transition: transform 0.15s ease;
+}}
+.fab-wrapper button:hover {{
+    transform: scale(1.08);
+}}
+
+/* ── 바텀시트 다이얼로그 ── */
+div[data-testid="stDialog"] > div > div[role="dialog"] {{
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
+    width: 440px !important;
+    max-width: 100vw !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 65vh !important;
+    overflow-y: auto !important;
+    animation: slideUp 0.22s ease-out !important;
+    padding-bottom: 16px !important;
+}}
+@keyframes slideUp {{
+    from {{ transform: translateX(-50%) translateY(60%); opacity: 0.4; }}
+    to   {{ transform: translateX(-50%) translateY(0);   opacity: 1; }}
+}}
+
+/* 드래그 핸들 */
+div[data-testid="stDialog"] > div > div[role="dialog"]::before {{
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: #DDD;
+    border-radius: 2px;
+    margin: 8px auto 12px;
+}}
+
+/* 예시 칩 버튼 */
+.chip-row button {{
+    border-radius: 20px !important;
+    border: 1.5px solid {NH_GREEN} !important;
+    color: {NH_GREEN} !important;
+    background: white !important;
+    font-size: 12px !important;
+    padding: 3px 8px !important;
+    min-height: unset !important;
+    height: 32px !important;
+}}
+
+/* 사용자 말풍선 */
+.user-bubble {{
+    background: {NH_GREEN};
+    color: white;
+    border-radius: 12px 12px 0 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 4px 0 4px 40px;
+    text-align: right;
+}}
+
+/* 에이전트 말풍선 (다이얼로그 내부용) */
+.bot-bubble {{
+    background: #F4F4F4;
+    border-radius: 12px 12px 12px 0;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 4px 40px 4px 0;
+}}
+
+/* ── 하단 탭바 ── */
+/* :has() — Chrome 105+, Safari 15.4+ 지원 */
+[data-testid="stVerticalBlock"]:has(#tab-bar-marker)
+  > [data-testid="stHorizontalBlock"]:last-child {{
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 440px !important;
+    max-width: 100vw !important;
+    background: white !important;
+    border-top: 1px solid #EBEBEB !important;
+    padding: 4px 0 12px !important;
+    z-index: 998 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+}}
+/* 탭 버튼 기본 */
+[data-testid="stVerticalBlock"]:has(#tab-bar-marker)
+  > [data-testid="stHorizontalBlock"]:last-child
+  button {{
+    background: transparent !important;
+    border: none !important;
+    border-top: 2px solid transparent !important;
+    box-shadow: none !important;
+    color: #999 !important;
+    font-size: 11px !important;
+    height: 48px !important;
+    min-height: unset !important;
+    border-radius: 0 !important;
+    padding: 4px 4px 8px !important;
+    transition: none !important;
+}}
+/* 활성 탭 (type="primary" → data-testid="baseButton-primary") */
+[data-testid="stVerticalBlock"]:has(#tab-bar-marker)
+  > [data-testid="stHorizontalBlock"]:last-child
+  button[data-testid="baseButton-primary"] {{
+    color: {NH_GREEN} !important;
+    border-top: 2.5px solid {NH_GREEN} !important;
+    font-weight: 700 !important;
+    background: transparent !important;
+}}
+</style>
+"""
+
+# ── 탭바 정의 ────────────────────────────────────────────────────────────────
+_TABS = [
+    ("🏠", "홈",     "home"),
+    ("💳", "금융상품", "financial_products"),
+    ("📊", "내자산",  "my_assets"),
+]
+# 각 탭에 속하는 route 목록
+_TAB_ROUTES = {
+    "home": {"home"},
+    "financial_products": {
+        "financial_products", "financial_products/isa",
+        "retirement_pension", "irp_new",
+        "irp_tax_saving", "my_pension", "portfolio",
+        "investment_diagnosis", "pension_design",
+    },
+    "my_assets": {"my_assets"},
+}
+
+def _active_tab(route: str) -> str:
+    for tab_key, routes in _TAB_ROUTES.items():
+        if route in routes:
+            return tab_key
+    return "home"
+
+
+# ── ADK Agent 러너 ────────────────────────────────────────────────────────────
+@st.cache_resource(show_spinner=False)
+def _get_runner() -> Runner:
+    from app.agent import root_agent
+    svc = InMemorySessionService()
+    svc.create_session_sync(
+        app_name="app", user_id="demo_user", session_id="demo_session"
+    )
+    return Runner(agent=root_agent, session_service=svc, app_name="app")
+
+
+def run_agent(query: str) -> dict:
+    """ADK 에이전트 실행 → {"text", "route", "consent", "highlight"}"""
+    result = {"text": "", "route": None, "consent": "", "highlight": None}
+    try:
+        runner = _get_runner()
+        message = genai_types.Content(
+            role="user", parts=[genai_types.Part.from_text(text=query)]
+        )
+        for event in runner.run(
+            new_message=message,
+            user_id="demo_user",
+            session_id="demo_session",
+            run_config=RunConfig(streaming_mode=StreamingMode.NONE),
+        ):
+            # navigate_ui 도구 호출 감지 → 라우팅 정보 추출
+            for fc in (event.get_function_calls() or []):
+                if fc.name == "navigate_ui":
+                    nav = navigate_ui(fc.args.get("screen_name", ""))
+                    if nav.get("type") == "navigation":
+                        result["route"]     = nav["route"]
+                        result["consent"]   = nav["consent_message"]
+                        result["highlight"] = nav.get("highlight_target")
+
+            # 최종 텍스트 응답 수집
+            if event.is_final_response() and event.content and event.content.parts:
+                result["text"] = "".join(
+                    p.text for p in event.content.parts if p.text
+                )
+    except Exception as e:
+        result["text"] = f"오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n({e!s:.120})"
+
+    if not result["text"]:
+        result["text"] = "죄송합니다, 다시 말씀해 주세요."
+    return result
+
+
+# ── TTS ──────────────────────────────────────────────────────────────────────
+def tts_audio_bytes(text: str) -> bytes | None:
+    try:
+        from gtts import gTTS  # noqa: PLC0415
+        buf = io.BytesIO()
+        gTTS(text=text[:400], lang="ko").write_to_fp(buf)
+        buf.seek(0)
+        return buf.read()
+    except Exception:
+        return None
+
+
+# ── STT HTML 위젯 ─────────────────────────────────────────────────────────────
+_STT_HTML = """
+<style>
+body { margin:0; background:transparent; font-family:'Noto Sans KR',sans-serif; }
+#stt-box {
+  display:flex; align-items:center; gap:12px;
+  background:#FFF3F3; border:2px solid #F44336;
+  border-radius:12px; padding:8px 14px; font-size:14px; color:#333;
+}
+.stt-dot {
+  width:14px; height:14px; border-radius:50%; background:#F44336; flex-shrink:0;
+  animation:blink 0.8s step-start infinite;
+}
+@keyframes blink { 50%{ opacity:0; } }
+#stt-text { flex:1; }
+</style>
+<div id="stt-box">
+  <div class="stt-dot"></div>
+  <span id="stt-text">🎤 녹음 중… 말씀해 주세요</span>
+</div>
+<script>
+(function(){
+  var R = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!R){
+    document.getElementById('stt-text').textContent = '❌ Chrome 브라우저에서만 지원됩니다';
+    setTimeout(function(){
+      var u = new URL(window.parent.location.href);
+      u.searchParams.set('stt_cancel','1');
+      window.parent.location.href = u.toString();
+    }, 2500);
+    return;
+  }
+  var r = new R();
+  r.lang = 'ko-KR';
+  r.interimResults = false;
+  r.maxAlternatives = 1;
+  r.onresult = function(e){
+    var t = e.results[0][0].transcript;
+    var u = new URL(window.parent.location.href);
+    u.searchParams.set('stt', t);
+    window.parent.location.href = u.toString();
+  };
+  var ended = false;
+  r.onerror = r.onend = function(){
+    if(ended) return; ended = true;
+    var u = new URL(window.parent.location.href);
+    if(!u.searchParams.has('stt')){
+      u.searchParams.set('stt_cancel','1');
+      window.parent.location.href = u.toString();
+    }
+  };
+  r.start();
+})();
+</script>
+"""
+
+
+def render_stt_widget():
+    components.html(_STT_HTML, height=52)
+
+
 # ── 라우트 정의 ───────────────────────────────────────────────────────────────
 ROUTE_TITLES = {
-    "home":                 "NH올원뱅크",
-    "financial_products":   "금융상품",
-    "retirement_pension":   "퇴직연금",
-    "irp_new":              "IRP 신규가입/입금",
-    "irp_tax_saving":       "개인형 IRP 세액공제용",
-    "my_pension":           "MY퇴직연금",
-    "portfolio":            "포트폴리오",
-    "investment_diagnosis": "투자 성향 진단",
-    "pension_design":       "연금설계",
+    "home":                     "NH올원뱅크",
+    "financial_products":       "금융상품",
+    "financial_products/isa":   "ISA 개인종합자산관리계좌",
+    "retirement_pension":       "퇴직연금",
+    "irp_new":                  "IRP 신규가입/입금",
+    "irp_tax_saving":           "개인형 IRP 세액공제용",
+    "my_pension":               "MY퇴직연금",
+    "portfolio":                "포트폴리오",
+    "investment_diagnosis":     "투자 성향 진단",
+    "pension_design":           "연금설계",
+    "my_assets":                "내 자산",
 }
 
 # ── 세션 초기화 ───────────────────────────────────────────────────────────────
@@ -73,6 +386,13 @@ def init_session():
         "pending_consent":  "",
         "pending_voice":    "",
         "agent_message":    "",
+        # 에이전트 팝업
+        "chat_history":     [],   # [{"role": "user"|"bot", "text": str}]
+        "chip_selected":    "",
+        "pending_query":    "",
+        # TTS / STT
+        "tts_audio":        None,
+        "stt_trigger":      False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -151,6 +471,147 @@ def section_label(text: str):
         unsafe_allow_html=True,
     )
 
+# ── 에이전트 팝업 (바텀시트 다이얼로그) ──────────────────────────────────────
+@st.dialog("배리어프리 도우미")
+def agent_popup():
+    chat_history = st.session_state.get("chat_history", [])
+
+    # ── 소개 영역 (대화 없을 때만 표시) ──
+    if not chat_history:
+        st.markdown(
+            '<div style="text-align:center;padding:4px 0 12px;">'
+            '<div style="font-size:40px;line-height:1.2;">💬</div>'
+            '<div style="font-weight:700;font-size:15px;margin-top:6px;">안녕하세요, 배리어프리 도우미입니다!</div>'
+            '<div style="color:#888;font-size:13px;margin-top:4px;line-height:1.5;">'
+            '금융 용어 설명·화면 이동·상품 안내를<br>도와드립니다.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            '<div style="color:#555;font-size:12px;font-weight:600;margin-bottom:6px;">'
+            '이런 걸 물어보세요</div>',
+            unsafe_allow_html=True,
+        )
+        c1, c2, c3 = st.columns(3)
+        chips = [
+            ("IRP가 뭔가요?",     c1, "chip_irp"),
+            ("기준금리 알려줘",   c2, "chip_rate"),
+            ("퇴직연금 가입",     c3, "chip_pension"),
+        ]
+        st.markdown('<div class="chip-row">', unsafe_allow_html=True)
+        for label, col, key in chips:
+            with col:
+                if st.button(label, key=key, use_container_width=True):
+                    st.session_state["pending_query"] = label
+                    st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.divider()
+
+    # ── 대화 내역 ──
+    else:
+        # TTS 재생 (새 응답이 있을 때 한 번만)
+        audio = st.session_state.get("tts_audio")
+        if audio:
+            st.audio(audio, format="audio/mp3", autoplay=True)
+            del st.session_state["tts_audio"]
+
+        for msg in chat_history:
+            if msg["role"] == "user":
+                st.markdown(
+                    f'<div class="user-bubble">{msg["text"]}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<div class="bot-bubble">💬&nbsp; {msg["text"]}</div>',
+                    unsafe_allow_html=True,
+                )
+
+        # navigate 제안 카드 (pending_route 있을 때)
+        if st.session_state.get("pending_route"):
+            with st.container(border=True):
+                st.markdown(
+                    f'📍 **{st.session_state["pending_consent"]}**',
+                    unsafe_allow_html=False,
+                )
+                yes_col, no_col = st.columns(2)
+                with yes_col:
+                    if st.button("✅ 네, 이동할게요", key="popup_yes",
+                                 use_container_width=True, type="primary"):
+                        go(st.session_state["pending_route"])
+                        st.session_state["pending_route"] = None
+                        st.rerun()
+                with no_col:
+                    if st.button("❌ 아니오", key="popup_no",
+                                 use_container_width=True):
+                        st.session_state["pending_route"] = None
+                        st.rerun()
+
+        st.divider()
+
+    # ── 입력창 (항상 표시) ──
+    col_in, col_mic = st.columns([5, 1])
+    with col_in:
+        user_input = st.text_input(
+            "질문",
+            placeholder="무엇이든 물어보세요",
+            label_visibility="collapsed",
+            key="dialog_text_input",
+        )
+    with col_mic:
+        if st.button("🎤", key="dialog_mic", help="음성 입력 (Chrome 전용)"):
+            st.session_state["stt_trigger"] = True
+            st.rerun()
+
+    if st.button("전송 →", key="dialog_send",
+                 use_container_width=True, type="primary"):
+        query = user_input.strip()
+        if query:
+            st.session_state["pending_query"] = query
+            # 위젯 상태 초기화 (다음 오픈 시 빈 입력창)
+            if "dialog_text_input" in st.session_state:
+                del st.session_state["dialog_text_input"]
+            st.rerun()
+
+
+# ── FAB 플로팅 버튼 ───────────────────────────────────────────────────────────
+def render_fab():
+    st.markdown('<div class="fab-wrapper">', unsafe_allow_html=True)
+    if st.button("💬", key="fab_agent", help="배리어프리 도우미"):
+        agent_popup()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ── 하단 탭바 ─────────────────────────────────────────────────────────────────
+def render_tab_bar():
+    active = _active_tab(st.session_state["current_route"])
+
+    # CSS :has() 선택자의 앵커 마커 (빈 span)
+    st.markdown('<span id="tab-bar-marker" style="display:none"></span>',
+                unsafe_allow_html=True)
+
+    cols = st.columns(3)
+    for col, (icon, label, target) in zip(cols, _TABS):
+        is_active = (active == target)
+        with col:
+            btn_type = "primary" if is_active else "secondary"
+            if st.button(
+                f"{icon} {label}",
+                key=f"tab_{target}",
+                type=btn_type,
+                use_container_width=True,
+            ):
+                if target == "home":
+                    st.session_state["history"] = []
+                    st.session_state["current_route"] = "home"
+                    st.session_state["highlight_target"] = None
+                else:
+                    go(target)
+                st.rerun()
+
+
 # ── 화면: 홈 ─────────────────────────────────────────────────────────────────
 def screen_home():
     st.markdown("**홍길동** 님 &nbsp;›", unsafe_allow_html=True)
@@ -169,39 +630,70 @@ def screen_home():
                 pass
 
     # 배리어프리 도우미 배너
-    st.markdown(
-        f'<div style="border:2px solid {NH_GREEN};border-radius:24px;padding:12px 20px;'
-        f'text-align:center;font-size:15px;color:{NH_GREEN};font-weight:bold;margin:8px 0;">'
-        "🤖 배리어프리 도우미에게 물어보세요</div>",
-        unsafe_allow_html=True,
-    )
+    if st.button(
+        "🦖 배리어프리 도우미에게 물어보세요",
+        key="home_agent_banner",
+        use_container_width=True,
+    ):
+        agent_popup()
 
     st.markdown("#### 빠른 메뉴")
+    _QUICK = [
+        ("🏦", "전체계좌조회", None),
+        ("💸", "ATM 출금",    None),
+        ("📊", "금융상품",    "financial_products"),
+        ("🛡️", "안전한금융",  None),
+    ]
     c1, c2 = st.columns(2)
-    with c1:
-        with st.container(border=True):
-            st.markdown("🏦&nbsp; 전체계좌조회")
-        with st.container(border=True):
-            st.markdown("💸&nbsp; ATM 출금")
-    with c2:
-        with st.container(border=True):
-            if st.button("📊 금융상품", key="home_fp", use_container_width=True):
-                go("financial_products")
-                st.rerun()
-        with st.container(border=True):
-            st.markdown("🛡️&nbsp; 안전한 금융생활")
+    for i, (icon, label, route) in enumerate(_QUICK):
+        with (c1 if i % 2 == 0 else c2):
+            if st.button(f"{icon}  {label}", key=f"home_q{i}", use_container_width=True):
+                if route:
+                    go(route)
+                    st.rerun()
 
 # ── 화면: 금융상품 ────────────────────────────────────────────────────────────
 def screen_financial_products():
-    menu_item("대출",         "loan",                 "💳")
-    menu_item("퇴직연금",     "retirement_pension",   "📈")
-    menu_item("외환",         "foreign_exchange",     "💱")
-    menu_item("보험",         "insurance",            "🛡️")
-    menu_item("펀드",         "fund",                 "📊")
-    menu_item("신탁",         "trust",                "🏛️")
-    menu_item("금융상품비교", "compare",              "⚖️")
-    menu_item("영업점상품관", "branch_products",      "🏢")
-    menu_item("스마트상담센터","smart_counsel",        "💬")
+    # 해시태그 칩 필터 (시각적 완성도용)
+    st.markdown(
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'
+        + "".join(
+            f'<span style="background:#F0F0F0;border-radius:20px;padding:4px 10px;'
+            f'font-size:12px;color:#555;">#{tag}</span>'
+            for tag in ["사회초년생", "직장인", "개인사업자", "은퇴준비"]
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    # 아이콘 그리드 (4열)
+    _PRODUCTS = [
+        ("🏦", "입출금",       None),
+        ("💰", "예금",         None),
+        ("🐷", "적금",         None),
+        ("🏠", "주택청약",     None),
+        ("📊", "펀드",         None),
+        ("💳", "대출",         None),
+        ("💱", "외환",         None),
+        ("👴", "퇴직연금",     "retirement_pension"),
+        ("🛡️", "보험",         None),
+        ("🏛️", "신탁",         None),
+        ("📋", "ISA",          "financial_products/isa"),
+        ("📈", "IRP",          "irp_new"),
+    ]
+
+    cols = st.columns(4)
+    for i, (icon, label, route) in enumerate(_PRODUCTS):
+        with cols[i % 4]:
+            clicked = st.button(
+                f"{icon}\n{label}",
+                key=f"fp_{label}",
+                use_container_width=True,
+                type="primary" if is_hl(label) else "secondary",
+            )
+            if clicked and route:
+                go(route)
+                st.rerun()
 
 # ── 화면: 퇴직연금 ────────────────────────────────────────────────────────────
 def screen_retirement_pension():
@@ -349,16 +841,90 @@ def screen_pension_design():
                 f"*(연 3.5% 복리 가정)*"
             )
 
+# ── 화면: ISA ────────────────────────────────────────────────────────────────
+def screen_isa():
+    tab_trust, tab_managed = st.tabs(["신탁형", "일임형"])
+
+    with tab_trust:
+        st.markdown("#### ISA 신탁형")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("비과세 한도", "200만원 / 년")
+        with c2:
+            st.metric("가입 한도", "연 2,000만원")
+        with st.container(border=True):
+            st.markdown(
+                "- 투자자가 **직접 종목·수량 지정** 운용\n"
+                "- 예·적금, 펀드, ETF, ELS 등 자유 편입\n"
+                "- 손익 통산 후 순이익 200만원까지 비과세\n"
+                "- 의무 가입 기간: **3년**"
+            )
+        st.button("ISA 신탁형 가입 →", type="primary", use_container_width=True, key="isa_trust_join")
+
+    with tab_managed:
+        st.markdown("#### ISA 일임형")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("비과세 한도", "200만원 / 년")
+        with c2:
+            st.metric("운용 유형", "초저위험~고위험")
+        with st.container(border=True):
+            st.markdown(
+                "- **전문가가 투자 성향에 맞게 포트폴리오 운용**\n"
+                "- 5단계 위험등급 모델 포트폴리오 제공\n"
+                "- 서민·농어민형: 비과세 400만원\n"
+                "- 의무 가입 기간: **3년**"
+            )
+        risk = st.select_slider(
+            "투자 성향 선택",
+            options=["초저위험", "저위험", "중위험", "고위험", "초고위험"],
+            value="중위험",
+            key="isa_risk",
+        )
+        st.button(f"ISA 일임형 ({risk}) 가입 →", type="primary",
+                  use_container_width=True, key="isa_managed_join")
+
+
+# ── 화면: 내 자산 ────────────────────────────────────────────────────────────
+def screen_my_assets():
+    st.markdown("#### 내 자산 현황")
+    with st.container(border=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("총 자산", "47,350,000원", "+2.1%")
+        with c2:
+            st.metric("이번 달 수익", "+320,000원", "")
+
+    st.markdown("##### 자산 구성")
+    items = [
+        ("🏦 예금·적금",   "12,350,000원", "26%"),
+        ("📈 IRP·연금",    "12,350,000원", "26%"),
+        ("💳 펀드·ETF",    "8,200,000원",  "17%"),
+        ("🏠 기타",        "14,450,000원", "31%"),
+    ]
+    for icon_label, amount, pct in items:
+        c1, c2, c3 = st.columns([4, 3, 1])
+        with c1:
+            st.markdown(icon_label)
+        with c2:
+            st.markdown(f'<div style="text-align:right">{amount}</div>', unsafe_allow_html=True)
+        with c3:
+            st.markdown(f'<div style="text-align:right;color:#888;font-size:12px">{pct}</div>', unsafe_allow_html=True)
+        st.markdown('<hr style="margin:4px 0;border-color:#F0F0F0">', unsafe_allow_html=True)
+
+
 SCREEN_MAP = {
-    "home":                 screen_home,
-    "financial_products":   screen_financial_products,
-    "retirement_pension":   screen_retirement_pension,
-    "irp_new":              screen_irp_new,
-    "irp_tax_saving":       screen_irp_tax_saving,
-    "my_pension":           screen_my_pension,
-    "portfolio":            screen_portfolio,
-    "investment_diagnosis": screen_investment_diagnosis,
-    "pension_design":       screen_pension_design,
+    "home":                     screen_home,
+    "financial_products":       screen_financial_products,
+    "financial_products/isa":   screen_isa,
+    "retirement_pension":       screen_retirement_pension,
+    "irp_new":                  screen_irp_new,
+    "irp_tax_saving":           screen_irp_tax_saving,
+    "my_pension":               screen_my_pension,
+    "portfolio":                screen_portfolio,
+    "investment_diagnosis":     screen_investment_diagnosis,
+    "pension_design":           screen_pension_design,
+    "my_assets":                screen_my_assets,
 }
 
 # ── 동의 UI ───────────────────────────────────────────────────────────────────
@@ -369,7 +935,7 @@ def render_consent_ui():
     st.markdown("---")
     with st.container(border=True):
         st.markdown(
-            f'<div class="agent-bubble">🤖 &nbsp;{st.session_state["pending_consent"]}</div>',
+            f'<div class="agent-bubble">💬 &nbsp;{st.session_state["pending_consent"]}</div>',
             unsafe_allow_html=True,
         )
         c1, c2 = st.columns(2)
@@ -383,50 +949,6 @@ def render_consent_ui():
                 st.session_state["highlight_target"] = None
                 st.rerun()
 
-# ── 에이전트 패널 ─────────────────────────────────────────────────────────────
-def render_agent_panel():
-    st.markdown("---")
-
-    if st.session_state.get("agent_message"):
-        st.markdown(
-            f'<div class="agent-bubble">🤖 &nbsp;{st.session_state["agent_message"]}</div>',
-            unsafe_allow_html=True,
-        )
-
-    with st.form("agent_input", clear_on_submit=True):
-        user_input = st.text_input(
-            "도우미",
-            placeholder="🎤  무엇이 궁금하세요? (예: IRP 가입하고 싶어요)",
-            label_visibility="collapsed",
-        )
-        submitted = st.form_submit_button("전송 →", use_container_width=True)
-
-    if submitted and user_input.strip():
-        _handle_agent_response(user_input.strip())
-        st.rerun()
-
-def _handle_agent_response(user_input: str):
-    result = navigate_ui(user_input)
-
-    if result.get("type") == "navigation":
-        st.session_state["pending_route"]   = result["route"]
-        st.session_state["pending_consent"] = result["consent_message"]
-        st.session_state["highlight_target"] = result.get("highlight_target")
-        st.session_state["agent_message"]   = result["voice_guide"]
-
-    elif result.get("status") == "hold":
-        st.session_state["pending_route"]   = result["route"]
-        st.session_state["pending_consent"] = result["voice_guide"]
-        st.session_state["highlight_target"] = result.get("highlight_target")
-        st.session_state["agent_message"]   = result["voice_guide"]
-
-    elif result.get("type") == "suggestion":
-        st.session_state["agent_message"]  = result["voice_guide"]
-        st.session_state["pending_route"]  = None
-
-    else:  # error
-        st.session_state["agent_message"]  = result["voice_guide"]
-        st.session_state["pending_route"]  = None
 
 # ── 메인 ─────────────────────────────────────────────────────────────────────
 def main():
@@ -437,7 +959,46 @@ def main():
     )
 
     init_session()
-    st.markdown(NH_CSS, unsafe_allow_html=True)
+    st.markdown(NH_CSS + DIALOG_CSS, unsafe_allow_html=True)
+
+    # ── STT 결과 query param 처리 ──
+    stt_result = st.query_params.get("stt", "")
+    stt_cancel = st.query_params.get("stt_cancel", "")
+    if stt_result or stt_cancel:
+        st.query_params.clear()
+        st.session_state["stt_trigger"] = False
+        if stt_result:
+            st.session_state["pending_query"] = stt_result
+        st.rerun()
+
+    # ── STT 위젯 표시 (마이크 버튼 클릭 후) ──
+    if st.session_state.get("stt_trigger"):
+        render_stt_widget()
+        if st.button("취소", key="stt_cancel_main"):
+            st.session_state["stt_trigger"] = False
+            st.rerun()
+        # STT가 활성 상태일 때는 나머지 UI 렌더링 생략
+        render_tab_bar()
+        render_fab()
+        return
+
+    # ── pending_query → ADK 에이전트 실행 ──
+    query = st.session_state.get("pending_query", "")
+    if query:
+        st.session_state["pending_query"] = ""
+        st.session_state["chat_history"].append({"role": "user", "text": query})
+        with st.spinner("도우미가 답변을 준비하고 있습니다..."):
+            result = run_agent(query)
+        st.session_state["chat_history"].append({"role": "bot", "text": result["text"]})
+        if result["route"]:
+            st.session_state["pending_route"]   = result["route"]
+            st.session_state["pending_consent"] = result["consent"]
+            st.session_state["highlight_target"] = result["highlight"]
+        # TTS 생성 (응답 텍스트 → 음성)
+        audio = tts_audio_bytes(result["text"])
+        if audio:
+            st.session_state["tts_audio"] = audio
+        agent_popup()   # 응답 확인을 위해 팝업 재오픈
 
     render_header()
 
@@ -445,8 +1006,8 @@ def main():
     screen_fn = SCREEN_MAP.get(route, screen_home)
     screen_fn()
 
-    render_consent_ui()
-    render_agent_panel()
+    render_tab_bar()   # 항상 마지막 — CSS :has(#tab-bar-marker) 의 last-child 매칭
+    render_fab()
 
 
 if __name__ == "__main__":
