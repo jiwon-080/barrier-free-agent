@@ -118345,5 +118345,83 @@
         }
       ]
     }
+  ],
+  "irp": [
+    {
+      "fin_prdt_cd": "NH_IRP_001",
+      "kor_co_nm": "농협은행주식회사",
+      "fin_prdt_nm": "NH 개인형IRP",
+      "product_type": "IRP",
+      "principal_protected": false,
+      "join_way": "영업점, 스마트폰",
+      "join_member_savings": "소득이 있는 누구나 (퇴직연금·퇴직금 가입 재직근로자, 자영업자, 직역연금 가입자 등)",
+      "join_member_retirement": "퇴직금 수령(예정)자 — 수령일로부터 60일 이내 입금",
+      "annual_limit_savings": 18000000,
+      "pension_requirement": "만 55세 이상 & 가입일로부터 5년 경과",
+      "pension_period_min_years": 10,
+      "investable_products": "원리금보장형(정기예금 등), 실적배당형(펀드 등)",
+      "tax_benefit": "연 900만원 한도 세액공제 (연금저축 600만원 + IRP/DC 300만원 합산). 총급여 5,500만원 이하(종합소득 4,500만원 이하): 16.5%, 초과: 13.2%",
+      "tax_saving_high_income": "총급여 5,500만원 초과 시 최대 118만8,000원 세액공제",
+      "tax_saving_low_income": "총급여 5,500만원 이하 시 최대 148만5,000원 세액공제",
+      "retirement_tax_pension": "연금수령 시 이연퇴직소득세의 70% 과세 (11~20년차 60%, 21년차~ 50%)",
+      "investment_risk_profile": {
+        "위험회피형": "원리금보장형 위주 구성",
+        "위험중립형": "원리금보장형 + 안정형 + 수익형 혼합 구성",
+        "위험선호형": "수익형 위주 구성"
+      },
+      "deposit_protection": "예금보호 대상 상품으로 운용되는 적립금에 한해 타 상품과 별도로 1인당 1억원까지 보호",
+      "spcl_cnd": "세액공제(최대 16.5%) + 복리 재투자 효과 + 퇴직소득세 30~50% 절세. ISA 만기 시 연금계좌 추가납입액의 10%(최대 300만원) 추가 세액공제 가능(당해 연도 한함).",
+      "etc_note": "일반 중도해지 시 세액공제 받은 원금·운용수익에 기타소득세(16.5%) 부과. 실적배당형 상품은 원금손실 가능. 문의: NH농협 퇴직연금 전용콜센터 1588-5995."
+    }
+  ],
+  "isa": [
+    {
+      "fin_prdt_cd": "NH_ISA_TRUST_001",
+      "kor_co_nm": "농협은행주식회사",
+      "fin_prdt_nm": "NH ISA 신탁형",
+      "isa_type": "신탁형",
+      "principal_protected": false,
+      "join_way": "영업점",
+      "join_member": "19세 이상 거주자. 15~19세 미만으로서 직전 과세기간 근로소득이 있는 자. 전 금융기관 1인 1계좌.",
+      "join_deny": "직전 3개년도 내 1회 이상 금융소득종합과세대상자 제외",
+      "annual_limit": 20000000,
+      "total_limit": 100000000,
+      "min_period_years": 3,
+      "investable_products": "예금, 적금, 예탁금, 펀드, 파생결합증권(ELS·ELB) 등",
+      "fee": "예금·적금·예탁금 연 0.1%, 집합투자증권 연 0.2%, ELB 연 0.1~0.3%, ELS 연 0.5~0.7% (분기별 후취)",
+      "deposit_protection": "예금보호 대상 상품에 한해 1인당 1억원까지 보호",
+      "spcl_cnd": "투자자가 직접 종목·수량·운용방법 지정. 투자경험이 많은 투자자에게 적합.",
+      "tax_benefit_general": "순소득 200만원까지 비과세, 초과분 9.9% 분리과세",
+      "tax_benefit_priority": "총급여 5천만원 이하 또는 종합소득 3,800만원 이하 거주자·농어민: 400만원까지 비과세",
+      "early_termination": "사망·해외이주는 기간 제한 없이 가능. 천재지변·퇴직·폐업·3개월 이상 입원 등은 사유발생일로부터 6개월 이내 가능.",
+      "etc_note": "의무가입기간(3년) 내 해지 시 일반과세 적용. 원금 비보장 상품 포함. 운용 중 신탁재산 종류에 따라 중도해지 제한 가능."
+    },
+    {
+      "fin_prdt_cd": "NH_ISA_DISCRETIONARY_001",
+      "kor_co_nm": "농협은행주식회사",
+      "fin_prdt_nm": "NH밸런스 ISA (일임형)",
+      "isa_type": "일임형",
+      "principal_protected": false,
+      "join_way": "영업점",
+      "join_member": "19세 이상 거주자. 15~19세 미만으로서 직전 과세기간 근로소득이 있는 자. 전 금융기관 1인 1계좌.",
+      "join_deny": "직전 3개년도 내 1회 이상 금융소득종합과세대상자 제외",
+      "min_amount": 100000,
+      "annual_limit": 20000000,
+      "total_limit": 100000000,
+      "min_period_years": 3,
+      "investable_products": "모델포트폴리오(MP)에 따른 펀드·채권·예금 혼합 운용",
+      "model_portfolios": [
+        {"name": "NH밸런스 저위험형ISA", "risk_level": "저위험", "annual_fee_rate_pct": 0.2, "types": ["A형", "B형"]},
+        {"name": "NH밸런스 중위험형ISA", "risk_level": "중위험", "annual_fee_rate_pct": 0.4, "types": ["A형", "B형"]},
+        {"name": "NH밸런스 고위험형ISA", "risk_level": "고위험", "annual_fee_rate_pct": 0.5, "types": ["A형", "B형"]}
+      ],
+      "fee_note": "분기별 후취. 직전 분기 수익률 마이너스 시 해당 분기 수수료 면제.",
+      "deposit_protection": "예금보호 대상 상품에 한해 1인당 1억원까지 보호",
+      "spcl_cnd": "전문가가 투자성향에 맞는 모델포트폴리오로 운용. 구체적 운용지시 없이 가입 가능. 투자경험이 적은 투자자에게 적합.",
+      "tax_benefit_general": "순소득 200만원까지 비과세, 초과분 9.9% 분리과세",
+      "tax_benefit_priority": "총급여 5천만원 이하 또는 종합소득 3,800만원 이하 거주자·농어민: 400만원까지 비과세",
+      "early_termination": "사망·해외이주는 기간 제한 없이 가능. 천재지변·퇴직·폐업·3개월 이상 입원 등은 사유발생일로부터 6개월 이내 가능.",
+      "etc_note": "의무가입기간(3년) 내 해지 시 일반과세 적용. 원금 비보장. 과거 운용성과가 미래 성과를 보장하지 않음."
+    }
   ]
 }

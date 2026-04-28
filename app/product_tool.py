@@ -165,6 +165,83 @@ def get_product_detail(product_name: str) -> str:
     )
 
 
+def get_irp_info() -> str:
+    """NH농협 개인형IRP(개인형퇴직연금) 상품 정보를 반환합니다.
+
+    Returns:
+        IRP 상품 설명 문자열 (가입대상, 세액공제, 수령요건, 투자성향별 운용방법 포함)
+    """
+    irp_products = _PRODUCTS.get("irp", [])
+    if not irp_products:
+        return "IRP 상품 정보를 찾을 수 없습니다."
+
+    p = irp_products[0]
+    risk_profiles = p.get("investment_risk_profile", {})
+    risk_lines = "\n".join(f"  - {k}: {v}" for k, v in risk_profiles.items())
+
+    return (
+        f"## {p['fin_prdt_nm']} ({p['kor_co_nm']})\n\n"
+        f"**가입대상(여유자금)**: {p.get('join_member_savings', '-')}\n"
+        f"**가입대상(퇴직금)**: {p.get('join_member_retirement', '-')}\n"
+        f"**연간 납입한도**: {p['annual_limit_savings']:,}원 (연금저축 합산)\n"
+        f"**투자가능상품**: {p.get('investable_products', '-')}\n\n"
+        f"**세액공제 혜택**\n{p.get('tax_benefit', '-')}\n"
+        f"  · {p.get('tax_saving_low_income', '')}\n"
+        f"  · {p.get('tax_saving_high_income', '')}\n\n"
+        f"**연금수령 요건**: {p.get('pension_requirement', '-')} → {p.get('pension_period_min_years', 10)}년 이상 수령\n"
+        f"**퇴직소득세 절세**: {p.get('retirement_tax_pension', '-')}\n\n"
+        f"**투자성향별 운용방법**\n{risk_lines}\n\n"
+        f"**예금자보호**: {p.get('deposit_protection', '-')}\n"
+        f"**특이사항**: {p.get('spcl_cnd', '-')}\n"
+        f"**유의사항**: {p.get('etc_note', '-')}"
+    )
+
+
+def get_isa_info(isa_type: str = "전체") -> str:
+    """NH농협 ISA(개인종합자산관리계좌) 상품 정보를 반환합니다.
+
+    Args:
+        isa_type: "신탁형", "일임형", "전체" 중 하나 (기본값: "전체")
+
+    Returns:
+        ISA 상품 설명 문자열
+    """
+    isa_products = _PRODUCTS.get("isa", [])
+    if not isa_products:
+        return "ISA 상품 정보를 찾을 수 없습니다."
+
+    if isa_type in ("신탁형", "일임형"):
+        targets = [p for p in isa_products if p.get("isa_type") == isa_type]
+    else:
+        targets = isa_products
+
+    if not targets:
+        return f"'{isa_type}' ISA 상품 정보를 찾을 수 없습니다."
+
+    lines = ["## NH농협 ISA(개인종합자산관리계좌) 안내\n"]
+    for p in targets:
+        lines.append(f"### {p['fin_prdt_nm']}")
+        lines.append(f"**유형**: {p.get('isa_type', '-')}  |  **원금보장**: {'보장' if p.get('principal_protected') else '비보장'}")
+        lines.append(f"**가입대상**: {p.get('join_member', '-')}")
+        lines.append(f"**가입제한**: {p.get('join_deny', '-')}")
+        lines.append(f"**납입한도**: 연간 {p['annual_limit']:,}원 / 총 {p['total_limit']:,}원")
+        lines.append(f"**의무가입기간**: {p.get('min_period_years', 3)}년")
+        lines.append(f"**투자가능상품**: {p.get('investable_products', '-')}")
+        lines.append(f"**세제혜택(일반)**: {p.get('tax_benefit_general', '-')}")
+        lines.append(f"**세제혜택(우대)**: {p.get('tax_benefit_priority', '-')}")
+        if "model_portfolios" in p:
+            lines.append("**모델포트폴리오(수수료)**:")
+            for mp in p["model_portfolios"]:
+                lines.append(f"  - {mp['name']}: 연 {mp['annual_fee_rate_pct']}%")
+            lines.append(f"  ({p.get('fee_note', '')})")
+        else:
+            lines.append(f"**수수료**: {p.get('fee', '-')}")
+        lines.append(f"**특징**: {p.get('spcl_cnd', '-')}")
+        lines.append(f"**유의사항**: {p.get('etc_note', '-')}\n")
+
+    return "\n".join(lines)
+
+
 def compare_products(product_names: list[str]) -> str:
     """여러 상품을 나란히 비교합니다 (최고금리 기준).
 
