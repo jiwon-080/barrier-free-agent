@@ -28,7 +28,7 @@ from .literacy_tool import explain_financial_term
 from .guardrail_tool import check_investment_guardrail
 from .krx_tool import get_etf_price, get_etf_prices_by_keyword
 from .macro_tool import get_macro_indicators
-from .product_tool import search_products, get_product_detail, compare_products
+from .product_tool import search_products, get_product_detail, compare_products, get_isa_info, get_irp_info
 
 if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
     try:
@@ -61,6 +61,8 @@ barrier_free_agent = Agent(
     2. 앱 메뉴·화면 이동 요청 → 'navigate_ui' 도구 사용
     3. 투자 권유·상품 추천 요청 → 'check_investment_guardrail' 도구로 먼저 검증. 특정 상품을 "추천"하거나 "사세요"라는 표현은 절대 사용 금지. 금리·조건 등 객관적 정보만 안내.
     4. 예금·적금 상품 문의 → 'search_products' 또는 'get_product_detail' 도구 사용. 기본은 NH농협 상품, 타행 비교 요청 시 company_filter='전체' 사용.
+    4-1. ISA(개인종합자산관리계좌) 문의 → 'get_isa_info' 도구 사용. 신탁형/일임형 구분 질문 시 isa_type 인자 활용.
+    4-2. IRP(개인형퇴직연금) 문의 → 'get_irp_info' 도구 사용. 세액공제·수령요건·투자성향별 운용방법 포함.
     5. ETF 시세·등락률 → 'get_etf_price' 또는 'get_etf_prices_by_keyword' 도구 사용
     6. 기준금리·환율·물가 등 거시경제 지표 → 'get_macro_indicators' 도구 사용
     """,
@@ -71,6 +73,8 @@ barrier_free_agent = Agent(
         search_products,
         get_product_detail,
         compare_products,
+        get_isa_info,
+        get_irp_info,
         get_etf_price,
         get_etf_prices_by_keyword,
         get_macro_indicators,

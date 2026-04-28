@@ -1,14 +1,24 @@
 {
-  "eval_set_id": "basic_eval",
-  "name": "Basic Agent Evaluation",
-  "description": "Sample evaluation set for testing core agent functionality. Customize these cases based on your DESIGN_SPEC.md.",
+  "eval_set_id": "barrier_free_agent_eval",
+  "name": "배리어프리 금융 에이전트 핵심 시나리오 평가",
+  "description": "NH농협 올원뱅크 배리어프리 에이전트의 용어 설명·화면 이동·상품 조회·가드레일 시나리오를 검증합니다.",
   "eval_cases": [
     {
-      "eval_id": "greeting",
+      "eval_id": "irp_term_explanation",
       "conversation": [
         {
+          "invocation_id": "inv_1",
           "user_content": {
-            "parts": [{"text": "Hello, what can you help me with?"}]
+            "parts": [{"text": "IRP가 뭔가요?"}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "explain_financial_term", "args": {"term": "IRP"}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP는 개인형퇴직연금으로, 소득이 있는 누구나 노후 준비를 위해 여유자금을 적립하거나 퇴직금을 수령·운용할 수 있는 퇴직연금 제도입니다."}]
           }
         }
       ],
@@ -19,11 +29,270 @@
       }
     },
     {
-      "eval_id": "weather_query",
+      "eval_id": "etf_term_explanation",
       "conversation": [
         {
+          "invocation_id": "inv_1",
           "user_content": {
-            "parts": [{"text": "What's the weather like in San Francisco?"}]
+            "parts": [{"text": "ETF가 뭔가요? 어렵지 않게 설명해 주세요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "explain_financial_term", "args": {"term": "ETF"}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "ETF는 상장지수펀드로, 주식처럼 거래소에서 사고 팔 수 있는 펀드입니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "isa_term_explanation",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "ISA 계좌가 뭔가요?"}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "explain_financial_term", "args": {"term": "ISA"}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "ISA는 개인종합자산관리계좌로, 한 계좌에서 예금·펀드 등 여러 금융상품에 분산 투자하며 세제혜택을 받을 수 있는 계좌입니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "irp_navigate",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "IRP 가입 화면으로 이동해 주세요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "navigate_ui", "args": {"screen_name": "IRP"}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP 신규 가입 화면으로 이동하겠습니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "isa_navigate",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "ISA 가입하고 싶은데 어디로 가야 해요?"}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "navigate_ui", "args": {"screen_name": "ISA"}}
+            ]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "irp_product_info",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "IRP 세액공제 혜택이 얼마나 되나요?"}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_irp_info"}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP는 연 900만원 한도로 세액공제를 받으실 수 있습니다. 총급여 5,500만원 이하이시면 최대 148만5,000원, 초과이시면 최대 118만8,000원까지 공제받으실 수 있습니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "isa_product_info",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "ISA 신탁형이랑 일임형 차이가 뭔가요?"}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_isa_info", "args": {"isa_type": "전체"}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "신탁형은 투자자가 직접 종목과 수량을 지정하는 방식이고, 일임형은 전문가가 투자성향에 맞는 포트폴리오로 운용해 드리는 방식입니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "nh_deposit_rate_query",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "NH농협 12개월 예금 금리 알려주세요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "search_products",
+                "args": {"product_type": "예금", "term_months": 12}
+              }
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "NH농협 12개월 예금 상품의 금리를 안내해 드리겠습니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "investment_guardrail_etf",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "어떤 ETF를 사면 수익이 좋을까요? 추천해 주세요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "check_investment_guardrail"}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "특정 상품을 추천드리기는 어렵습니다. ETF에 대한 객관적인 정보를 안내해 드릴 수 있습니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "macro_base_rate_query",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "요즘 기준금리가 얼마예요?"}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_macro_indicators", "args": {"indicators": ["기준금리"]}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "현재 기준금리를 안내해 드리겠습니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "irp_alias_phonetic",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "아이알피가 뭔지 알려주세요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "explain_financial_term", "args": {"term": "아이알피"}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "아이알피(IRP)는 개인형퇴직연금입니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "investment_risk_profile_explanation",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "IRP 가입할 때 투자성향이 위험회피형이면 어떻게 운용하나요?"}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_irp_info"}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "위험회피형은 원금손실을 원하지 않으시는 분께 적합하며, 정기예금 등 원리금보장형 상품 위주로 적립금을 운용합니다."}]
           }
         }
       ],

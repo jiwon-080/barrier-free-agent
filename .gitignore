@@ -1,6 +1,5 @@
 memory.md
-GEMINI.md
-CLAUDE.md
+app/.adk/
 data/images/
 data/rag/*.pdf
 data/rag/*.pkl
