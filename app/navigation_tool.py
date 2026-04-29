@@ -173,14 +173,52 @@ def navigate_ui(screen_name: str) -> dict:
 
     upper = screen_name.upper()
 
-    # IRP → 퇴직연금으로 안내
+    # MY퇴직연금 / 내 퇴직연금 (IRP 이전에 체크)
+    if "MY퇴직" in upper or "내퇴직" in upper or "내 퇴직" in screen_name:
+        return {
+            "type": "navigation",
+            "route": "my_pension",
+            "consent_message": "MY 퇴직연금 화면으로 이동해 드릴까요?",
+            "voice_guide": "MY 퇴직연금 현황 화면으로 안내해 드릴게요.",
+            "highlight_target": "MY퇴직연금",
+        }
+
+    # IRP — 의도에 따라 구체적 화면으로 분기
     if "IRP" in upper:
+        signup_keywords = ["신규", "가입", "만들", "개설", "시작"]
+        tax_keywords = ["세액공제", "세금", "절세"]
+        if any(kw in screen_name for kw in signup_keywords):
+            return {
+                "type": "navigation",
+                "route": "irp_new",
+                "consent_message": "IRP 신규가입 화면으로 이동해 드릴까요?",
+                "voice_guide": "IRP 신규가입 화면으로 안내해 드릴게요.",
+                "highlight_target": "IRP",
+            }
+        if any(kw in screen_name for kw in tax_keywords):
+            return {
+                "type": "navigation",
+                "route": "irp_tax_saving",
+                "consent_message": "IRP 세액공제 가입 화면으로 이동해 드릴까요?",
+                "voice_guide": "IRP 세액공제 가입 화면으로 안내해 드릴게요.",
+                "highlight_target": "IRP",
+            }
+        # 일반 IRP 조회 → 퇴직연금 카테고리
         nav = navigation_map["퇴직연금"].copy()
-        nav["voice_guide"] = (
-            "IRP는 퇴직연금 메뉴 안에 있어요. "
-            "퇴직연금 화면으로 안내해 드릴게요."
-        )
+        nav["voice_guide"] = "IRP는 퇴직연금 메뉴 안에 있습니다. 퇴직연금 화면으로 안내해 드릴게요."
         return {"type": "navigation", **nav}
+
+    # ISA 가입 의도
+    if "ISA" in upper:
+        signup_keywords = ["신규", "가입", "만들", "개설", "시작"]
+        if any(kw in screen_name for kw in signup_keywords):
+            return {
+                "type": "navigation",
+                "route": "financial_products/isa",
+                "consent_message": "ISA 가입 화면으로 이동해 드릴까요?",
+                "voice_guide": "ISA 가입 화면으로 안내해 드릴게요.",
+                "highlight_target": "ISA",
+            }
 
     # 키워드 매칭
     for key, nav_info in navigation_map.items():

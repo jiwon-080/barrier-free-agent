@@ -165,21 +165,21 @@ def get_product_detail(product_name: str) -> str:
     )
 
 
-def get_irp_info() -> str:
+def get_irp_info() -> dict:
     """NH농협 개인형IRP(개인형퇴직연금) 상품 정보를 반환합니다.
 
     Returns:
-        IRP 상품 설명 문자열 (가입대상, 세액공제, 수령요건, 투자성향별 운용방법 포함)
+        dict: 상품정보, 주요혜택, 경고사항, 투자성향진단필요, 추천다음단계 포함
     """
     irp_products = _PRODUCTS.get("irp", [])
     if not irp_products:
-        return "IRP 상품 정보를 찾을 수 없습니다."
+        return {"오류": "IRP 상품 정보를 찾을 수 없습니다."}
 
     p = irp_products[0]
     risk_profiles = p.get("investment_risk_profile", {})
     risk_lines = "\n".join(f"  - {k}: {v}" for k, v in risk_profiles.items())
 
-    return (
+    상품정보 = (
         f"## {p['fin_prdt_nm']} ({p['kor_co_nm']})\n\n"
         f"**가입대상(여유자금)**: {p.get('join_member_savings', '-')}\n"
         f"**가입대상(퇴직금)**: {p.get('join_member_retirement', '-')}\n"
@@ -196,19 +196,34 @@ def get_irp_info() -> str:
         f"**유의사항**: {p.get('etc_note', '-')}"
     )
 
+    return {
+        "상품정보": 상품정보,
+        "주요혜택": f"연 {p['annual_limit_savings'] // 10000}백만 원까지 세액공제, 연금 수령 시 퇴직소득세 절감",
+        "경고사항": [
+            "55세 이상·가입기간 10년 이상 충족해야 연금 수령 가능",
+            "중도해지 시 기타소득세(16.5%) 부과 및 세액공제 혜택 전액 반환",
+            "투자 상품 포함 시 원금 손실 발생 가능",
+        ],
+        "투자성향진단필요": True,
+        "추천다음단계": [
+            {"label": "투자성향 진단 받기", "route": "investment_diagnosis"},
+            {"label": "IRP 신규가입 화면", "route": "irp_new"},
+        ],
+    }
 
-def get_isa_info(isa_type: str = "전체") -> str:
+
+def get_isa_info(isa_type: str = "전체") -> dict:
     """NH농협 ISA(개인종합자산관리계좌) 상품 정보를 반환합니다.
 
     Args:
         isa_type: "신탁형", "일임형", "전체" 중 하나 (기본값: "전체")
 
     Returns:
-        ISA 상품 설명 문자열
+        dict: 상품정보, 주요혜택, 경고사항, 투자성향진단필요, 추천다음단계 포함
     """
     isa_products = _PRODUCTS.get("isa", [])
     if not isa_products:
-        return "ISA 상품 정보를 찾을 수 없습니다."
+        return {"오류": "ISA 상품 정보를 찾을 수 없습니다."}
 
     if isa_type in ("신탁형", "일임형"):
         targets = [p for p in isa_products if p.get("isa_type") == isa_type]
@@ -216,7 +231,7 @@ def get_isa_info(isa_type: str = "전체") -> str:
         targets = isa_products
 
     if not targets:
-        return f"'{isa_type}' ISA 상품 정보를 찾을 수 없습니다."
+        return {"오류": f"'{isa_type}' ISA 상품 정보를 찾을 수 없습니다."}
 
     lines = ["## NH농협 ISA(개인종합자산관리계좌) 안내\n"]
     for p in targets:
@@ -239,7 +254,25 @@ def get_isa_info(isa_type: str = "전체") -> str:
         lines.append(f"**특징**: {p.get('spcl_cnd', '-')}")
         lines.append(f"**유의사항**: {p.get('etc_note', '-')}\n")
 
-    return "\n".join(lines)
+    has_investment = any(
+        "펀드" in p.get("investable_products", "") or "ETF" in p.get("investable_products", "")
+        for p in targets
+    )
+
+    return {
+        "상품정보": "\n".join(lines),
+        "주요혜택": "이익금 200만 원(서민형 400만 원) 비과세, 초과분 9.9% 분리과세",
+        "경고사항": [
+            "의무가입기간 3년 — 중도 해지 시 세금 혜택 전액 소멸",
+            "납입원금 범위 내 부분 인출만 가능하며 인출 후 재납입 불가 (입출금 자유 아님)",
+            "신탁형 선택 시 투자 상품 포함으로 원금 손실 발생 가능",
+        ],
+        "투자성향진단필요": has_investment,
+        "추천다음단계": [
+            {"label": "투자성향 진단 먼저 받기", "route": "investment_diagnosis"},
+            {"label": "ISA 가입 화면으로 이동", "route": "financial_products/isa"},
+        ],
+    }
 
 
 def compare_products(product_names: list[str]) -> str:
