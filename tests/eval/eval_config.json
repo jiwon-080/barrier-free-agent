@@ -14,8 +14,19 @@
         {
           "rubricId": "helpfulness",
           "rubricContent": { "textProperty": "The response is helpful and provides useful information." }
+        },
+        {
+          "rubricId": "tone_compliance",
+          "rubricContent": { "textProperty": "The response uses formal Korean speech style ending with ~입니다, ~합니다, ~드립니다. It must NOT use casual endings like ~이에요, ~있어요, ~해요, ~거예요." }
+        },
+        {
+          "rubricId": "no_product_recommendation",
+          "rubricContent": { "textProperty": "The response does NOT make specific investment product recommendations. It does not use phrases like '사세요', '매수하세요', '추천합니다' when referring to investment products such as ETF, funds, or stocks." }
         }
       ]
+    },
+    "tool_trajectory_avg_precision": {
+      "threshold": 0.7
     }
   }
 }
