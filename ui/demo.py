@@ -331,7 +331,24 @@ def show_terms_dialog():
     )
 
 
-def run_agent(query: str) -> dict:
+_TOOL_LABELS: dict[str, str] = {
+    "navigate_ui":                "📍 화면 경로 탐색 중...",
+    "get_irp_info":               "📋 IRP 상품 정보 조회 중...",
+    "get_isa_info":               "📋 ISA 상품 정보 조회 중...",
+    "explain_financial_term":     "📚 금융 용어 사전 검색 중...",
+    "check_investment_guardrail": "🛡 투자 적합성 검토 중...",
+    "search_products":            "🔍 예·적금 상품 검색 중...",
+    "get_product_detail":         "🔍 상품 상세 정보 조회 중...",
+    "compare_products":           "⚖️ 상품 비교 중...",
+    "get_etf_price":              "📈 ETF 시세 조회 중...",
+    "get_etf_prices_by_keyword":  "📈 ETF 시세 조회 중...",
+    "get_macro_indicators":       "📊 거시경제 지표 조회 중...",
+    "financial_advisor_agent":    "🤝 금융 전문 에이전트 상담 중...",
+    "set_user_profile":           "👤 투자성향 기록 중...",
+}
+
+
+def run_agent(query: str, on_step=None) -> dict:
     """ADK 에이전트 실행 → {"text", "route", "consent", "highlight", "warnings", "suggest_actions"}"""
     result = {
         "text": "", "route": None, "consent": "", "highlight": None,
@@ -352,6 +369,8 @@ def run_agent(query: str) -> dict:
             run_config=RunConfig(streaming_mode=StreamingMode.NONE),
         ):
             for fc in (event.get_function_calls() or []):
+                if on_step and fc.name in _TOOL_LABELS:
+                    on_step(_TOOL_LABELS[fc.name])
                 if fc.name == "navigate_ui":
                     _nav_called = True
                     nav = navigate_ui(fc.args.get("screen_name", ""))
@@ -407,6 +426,17 @@ def run_agent(query: str) -> dict:
     if not result["text"]:
         result["text"] = "죄송합니다, 다시 말씀해 주세요."
     return result
+
+
+# ── 생각 중 오버레이 카드 ─────────────────────────────────────────────────────
+def _thinking_card(label: str) -> str:
+    return (
+        f'<div style="background:{NH_LIGHT_GREEN};border-radius:10px;'
+        f'padding:14px 18px;text-align:center;margin:8px 0;">'
+        f'<div style="font-size:18px;margin-bottom:4px;">⏳</div>'
+        f'<div style="font-size:13px;font-weight:600;color:{NH_GREEN};">{label}</div>'
+        f'</div>'
+    )
 
 
 # ── TTS ──────────────────────────────────────────────────────────────────────
@@ -582,6 +612,35 @@ def section_label(text: str):
 # ── 에이전트 팝업 (바텀시트 다이얼로그) ──────────────────────────────────────
 @st.dialog("배리어프리 도우미")
 def agent_popup():
+    # ── 펜딩 쿼리 처리 — 다이얼로그 내부에서 직접 실행 ──
+    pending = st.session_state.get("pending_query", "")
+    if pending:
+        st.session_state["pending_query"] = ""
+        st.session_state["chat_history"].append({"role": "user", "text": pending})
+        thinking_ph = st.empty()
+        thinking_ph.markdown(_thinking_card("🤔 도우미가 생각하고 있습니다..."), unsafe_allow_html=True)
+        result = run_agent(
+            pending,
+            on_step=lambda lbl: thinking_ph.markdown(_thinking_card(lbl), unsafe_allow_html=True),
+        )
+        thinking_ph.empty()
+        st.session_state["chat_history"].append({
+            "role": "bot",
+            "text": result["text"],
+            "warnings": result.get("warnings", []),
+            "suggest_actions": result.get("suggest_actions", []),
+        })
+        if result["route"]:
+            st.session_state["pending_route"]     = result["route"]
+            st.session_state["pending_consent"]   = result["consent"]
+            st.session_state["highlight_target"]  = result["highlight"]
+            st.session_state["pending_nav_steps"] = result.get("nav_steps", [])
+        audio = tts_audio_bytes(_strip_markdown_for_tts(result["text"]))
+        if audio:
+            st.session_state["tts_audio"] = audio
+        st.session_state["reopen_popup"] = True
+        st.rerun()
+
     chat_history = st.session_state.get("chat_history", [])
 
     # ── 소개 영역 (대화 없을 때만 표시) ──
@@ -767,10 +826,8 @@ def render_bot_message(msg: dict, msg_idx: int):
                 unsafe_allow_html=True,
             )
 
-    # 추천 다음단계 칩 (structured 우선, fallback → 텍스트 파싱)
+    # 추천 다음단계 칩 — 도구 구조화 데이터만 사용 (LLM 텍스트 파싱 제거)
     chips = [(a["route"], a["label"]) for a in suggest_actions]
-    if not chips:
-        chips = [(r.strip(), l.strip()) for r, l in _SUGGEST_RE.findall(text)]
 
     # irp_new / ISA 가입 칩은 consent + nav_steps flow로 처리
     _CHIP_CONSENT_MAP = {
@@ -1256,29 +1313,9 @@ def main():
         st.session_state["reopen_popup"] = False
         agent_popup()
 
-    # ── pending_query → ADK 에이전트 실행 ──
-    query = st.session_state.get("pending_query", "")
-    if query:
-        st.session_state["pending_query"] = ""
-        st.session_state["chat_history"].append({"role": "user", "text": query})
-        with st.spinner("도우미가 답변을 준비하고 있습니다..."):
-            result = run_agent(query)
-        st.session_state["chat_history"].append({
-            "role": "bot",
-            "text": result["text"],
-            "warnings": result.get("warnings", []),
-            "suggest_actions": result.get("suggest_actions", []),
-        })
-        if result["route"]:
-            st.session_state["pending_route"]    = result["route"]
-            st.session_state["pending_consent"]  = result["consent"]
-            st.session_state["highlight_target"] = result["highlight"]
-            st.session_state["pending_nav_steps"] = result.get("nav_steps", [])
-        # TTS 생성 — SUGGEST 마커 제거 후 음성 변환
-        audio = tts_audio_bytes(_strip_markdown_for_tts(result["text"]))
-        if audio:
-            st.session_state["tts_audio"] = audio
-        agent_popup()   # 응답 확인을 위해 팝업 재오픈
+    # ── pending_query → 다이얼로그 내부에서 처리 ──
+    elif st.session_state.get("pending_query"):
+        agent_popup()
 
     render_header()
     render_nav_badge()
