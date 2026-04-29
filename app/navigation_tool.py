@@ -187,25 +187,34 @@ def navigate_ui(screen_name: str) -> dict:
     if "IRP" in upper:
         signup_keywords = ["신규", "가입", "만들", "개설", "시작"]
         tax_keywords = ["세액공제", "세금", "절세"]
+        _IRP_STEPS = [
+            {"route": "irp_new", "highlight": "개인형 IRP 세액공제용", "instruction": "개인형 IRP 세액공제용을 선택해주세요"},
+            {"route": "irp_tax_saving", "highlight": "가입확인", "instruction": "가입 전 필수 항목을 확인해주세요"},
+        ]
         if any(kw in screen_name for kw in signup_keywords):
             return {
                 "type": "navigation",
                 "route": "irp_new",
-                "consent_message": "IRP 신규가입 화면으로 이동해 드릴까요?",
+                "consent_message": "IRP 신규가입 화면으로 안내해 드릴까요?",
                 "voice_guide": "IRP 신규가입 화면으로 안내해 드릴게요.",
                 "highlight_target": "IRP",
+                "steps": _IRP_STEPS,
             }
         if any(kw in screen_name for kw in tax_keywords):
             return {
                 "type": "navigation",
                 "route": "irp_tax_saving",
-                "consent_message": "IRP 세액공제 가입 화면으로 이동해 드릴까요?",
+                "consent_message": "IRP 세액공제 가입 화면으로 안내해 드릴까요?",
                 "voice_guide": "IRP 세액공제 가입 화면으로 안내해 드릴게요.",
                 "highlight_target": "IRP",
+                "steps": _IRP_STEPS,
             }
         # 일반 IRP 조회 → 퇴직연금 카테고리
         nav = navigation_map["퇴직연금"].copy()
         nav["voice_guide"] = "IRP는 퇴직연금 메뉴 안에 있습니다. 퇴직연금 화면으로 안내해 드릴게요."
+        nav["steps"] = [
+            {"route": "retirement_pension", "highlight": "IRP 신규가입/입금", "instruction": "IRP 신규가입/입금을 선택해주세요"},
+        ]
         return {"type": "navigation", **nav}
 
     # ISA 가입 의도
@@ -215,7 +224,7 @@ def navigate_ui(screen_name: str) -> dict:
             return {
                 "type": "navigation",
                 "route": "financial_products/isa",
-                "consent_message": "ISA 가입 화면으로 이동해 드릴까요?",
+                "consent_message": "ISA 가입 화면으로 안내해 드릴까요?",
                 "voice_guide": "ISA 가입 화면으로 안내해 드릴게요.",
                 "highlight_target": "ISA",
             }
