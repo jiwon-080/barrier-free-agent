@@ -1,8 +1,9 @@
 {
   "eval_set_id": "barrier_free_agent_eval",
   "name": "배리어프리 금융 에이전트 핵심 시나리오 평가",
-  "description": "NH농협 올원뱅크 배리어프리 에이전트의 용어 설명·화면 이동·상품 조회·가드레일 시나리오를 검증합니다.",
+  "description": "NH농협 올원뱅크 배리어프리 에이전트의 용어 설명·화면 이동·상품 조회·가드레일·위임 시나리오를 검증합니다.",
   "eval_cases": [
+
     {
       "eval_id": "irp_term_explanation",
       "conversation": [
@@ -22,12 +23,9 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "etf_term_explanation",
       "conversation": [
@@ -47,12 +45,9 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "isa_term_explanation",
       "conversation": [
@@ -72,12 +67,9 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "irp_navigate",
       "conversation": [
@@ -88,21 +80,19 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "navigate_ui", "args": {"screen_name": "IRP"}}
+              {"name": "get_irp_info"},
+              {"name": "navigate_ui"}
             ]
           },
           "final_response": {
             "role": "model",
-            "parts": [{"text": "IRP 신규 가입 화면으로 이동하겠습니다."}]
+            "parts": [{"text": "IRP 신규가입 화면으로 이동해 드리겠습니다."}]
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "isa_navigate",
       "conversation": [
@@ -113,17 +103,15 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "navigate_ui", "args": {"screen_name": "ISA"}}
+              {"name": "get_isa_info"},
+              {"name": "navigate_ui"}
             ]
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "irp_product_info",
       "conversation": [
@@ -143,12 +131,9 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "isa_product_info",
       "conversation": [
@@ -168,12 +153,9 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "nh_deposit_rate_query",
       "conversation": [
@@ -184,10 +166,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {
-                "name": "search_products",
-                "args": {"product_type": "예금", "term_months": 12}
-              }
+              {"name": "search_products", "args": {"product_type": "예금", "term_months": 12}}
             ]
           },
           "final_response": {
@@ -196,12 +175,9 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "investment_guardrail_etf",
       "conversation": [
@@ -221,12 +197,9 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "macro_base_rate_query",
       "conversation": [
@@ -246,12 +219,9 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "irp_alias_phonetic",
       "conversation": [
@@ -271,12 +241,9 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     },
+
     {
       "eval_id": "investment_risk_profile_explanation",
       "conversation": [
@@ -296,11 +263,142 @@
           }
         }
       ],
-      "session_input": {
-        "app_name": "app",
-        "user_id": "eval_user",
-        "state": {}
-      }
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
+    },
+
+    {
+      "eval_id": "irp_signup_full_flow",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "IRP 가입하고 싶어요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_irp_info"},
+              {"name": "navigate_ui"}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP는 연 900만 원까지 세액공제를 받으실 수 있습니다. 아래 버튼을 눌러주시면 IRP 신규가입 화면으로 이동합니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
+    },
+
+    {
+      "eval_id": "isa_signup_full_flow",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "ISA 만들고 싶어요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_isa_info"},
+              {"name": "navigate_ui"}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "ISA는 비과세 혜택을 받으실 수 있는 절세 계좌입니다. 아래 버튼을 눌러주시면 ISA 가입 화면으로 이동합니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
+    },
+
+    {
+      "eval_id": "etf_price_delegation",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "KODEX 200 ETF 현재 시세 알려주세요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "financial_advisor_agent"}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "KODEX 200의 현재 시세를 안내해 드립니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
+    },
+
+    {
+      "eval_id": "investment_profile_recording",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "저는 원금 손실 없이 안정적으로 운용하고 싶어요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "set_user_profile", "args": {"investment_profile": "위험회피형"}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "위험회피형으로 기록해 드렸습니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
+    },
+
+    {
+      "eval_id": "irp_early_withdrawal_risk",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "IRP 중도 해지하면 어떻게 되나요? 세금 많이 나오나요?"}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_irp_info"}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP를 중도 해지하시면 세액공제를 받은 납입 원금 전액과 운용 수익에 기타소득세 16.5%가 부과됩니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
+    },
+
+    {
+      "eval_id": "deposit_cross_bank_compare",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "NH농협 말고 다른 은행 예금이랑 금리 비교해 주세요."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "search_products", "args": {"product_type": "예금", "company_filter": "전체"}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "타행 예금 상품과 비교하여 안내해 드리겠습니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     }
+
   ]
 }
