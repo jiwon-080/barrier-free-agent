@@ -3,11 +3,11 @@ NH 배리어프리 에이전트 — 로컬 데모
 실행: uv run streamlit run ui/demo.py
 """
 import io
+import re
 import sys
 from pathlib import Path
 
 import streamlit as st
-import streamlit.components.v1 as components
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -137,16 +137,18 @@ div[data-testid="stDialog"] > div > div[role="dialog"]::before {{
     margin: 8px auto 12px;
 }}
 
-/* 예시 칩 버튼 */
+/* 예시 칩 / SUGGEST 액션 버튼 */
 .chip-row button {{
     border-radius: 20px !important;
-    border: 1.5px solid {NH_GREEN} !important;
-    color: {NH_GREEN} !important;
-    background: white !important;
-    font-size: 12px !important;
-    padding: 3px 8px !important;
+    border: none !important;
+    color: white !important;
+    background: {NH_GREEN} !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 6px 14px !important;
     min-height: unset !important;
-    height: 32px !important;
+    height: 36px !important;
+    box-shadow: 0 2px 6px rgba(0,165,80,0.35) !important;
 }}
 
 /* 사용자 말풍선 */
@@ -238,6 +240,9 @@ def _active_tab(route: str) -> str:
     for tab_key, routes in _TAB_ROUTES.items():
         if route in routes:
             return tab_key
+    # navigation_tool 반환 route가 "financial_products/xxx" 형태일 때
+    if route.startswith("financial_products"):
+        return "financial_products"
     return "home"
 
 
@@ -253,8 +258,11 @@ def _get_runner() -> Runner:
 
 
 def run_agent(query: str) -> dict:
-    """ADK 에이전트 실행 → {"text", "route", "consent", "highlight"}"""
-    result = {"text": "", "route": None, "consent": "", "highlight": None}
+    """ADK 에이전트 실행 → {"text", "route", "consent", "highlight", "warnings", "suggest_actions"}"""
+    result = {
+        "text": "", "route": None, "consent": "", "highlight": None,
+        "warnings": [], "suggest_actions": [],
+    }
     try:
         runner = _get_runner()
         message = genai_types.Content(
@@ -266,7 +274,6 @@ def run_agent(query: str) -> dict:
             session_id="demo_session",
             run_config=RunConfig(streaming_mode=StreamingMode.NONE),
         ):
-            # navigate_ui 도구 호출 감지 → 라우팅 정보 추출
             for fc in (event.get_function_calls() or []):
                 if fc.name == "navigate_ui":
                     nav = navigate_ui(fc.args.get("screen_name", ""))
@@ -275,7 +282,21 @@ def run_agent(query: str) -> dict:
                         result["consent"]   = nav["consent_message"]
                         result["highlight"] = nav.get("highlight_target")
 
-            # 최종 텍스트 응답 수집
+                # 구조화 도구 인터셉트 — LLM 텍스트 포맷에 의존하지 않고 직접 추출
+                elif fc.name == "get_isa_info":
+                    from app.product_tool import get_isa_info  # noqa: PLC0415
+                    info = get_isa_info(fc.args.get("isa_type", "전체"))
+                    if isinstance(info, dict):
+                        result["warnings"]        = info.get("경고사항", [])
+                        result["suggest_actions"] = info.get("추천다음단계", [])
+
+                elif fc.name == "get_irp_info":
+                    from app.product_tool import get_irp_info  # noqa: PLC0415
+                    info = get_irp_info()
+                    if isinstance(info, dict):
+                        result["warnings"]        = info.get("경고사항", [])
+                        result["suggest_actions"] = info.get("추천다음단계", [])
+
             if event.is_final_response() and event.content and event.content.parts:
                 result["text"] = "".join(
                     p.text for p in event.content.parts if p.text
@@ -299,66 +320,6 @@ def tts_audio_bytes(text: str) -> bytes | None:
     except Exception:
         return None
 
-
-# ── STT HTML 위젯 ─────────────────────────────────────────────────────────────
-_STT_HTML = """
-<style>
-body { margin:0; background:transparent; font-family:'Noto Sans KR',sans-serif; }
-#stt-box {
-  display:flex; align-items:center; gap:12px;
-  background:#FFF3F3; border:2px solid #F44336;
-  border-radius:12px; padding:8px 14px; font-size:14px; color:#333;
-}
-.stt-dot {
-  width:14px; height:14px; border-radius:50%; background:#F44336; flex-shrink:0;
-  animation:blink 0.8s step-start infinite;
-}
-@keyframes blink { 50%{ opacity:0; } }
-#stt-text { flex:1; }
-</style>
-<div id="stt-box">
-  <div class="stt-dot"></div>
-  <span id="stt-text">🎤 녹음 중… 말씀해 주세요</span>
-</div>
-<script>
-(function(){
-  var R = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!R){
-    document.getElementById('stt-text').textContent = '❌ Chrome 브라우저에서만 지원됩니다';
-    setTimeout(function(){
-      var u = new URL(window.parent.location.href);
-      u.searchParams.set('stt_cancel','1');
-      window.parent.location.href = u.toString();
-    }, 2500);
-    return;
-  }
-  var r = new R();
-  r.lang = 'ko-KR';
-  r.interimResults = false;
-  r.maxAlternatives = 1;
-  r.onresult = function(e){
-    var t = e.results[0][0].transcript;
-    var u = new URL(window.parent.location.href);
-    u.searchParams.set('stt', t);
-    window.parent.location.href = u.toString();
-  };
-  var ended = false;
-  r.onerror = r.onend = function(){
-    if(ended) return; ended = true;
-    var u = new URL(window.parent.location.href);
-    if(!u.searchParams.has('stt')){
-      u.searchParams.set('stt_cancel','1');
-      window.parent.location.href = u.toString();
-    }
-  };
-  r.start();
-})();
-</script>
-"""
-
-
-def render_stt_widget():
-    components.html(_STT_HTML, height=52)
 
 
 # ── 라우트 정의 ───────────────────────────────────────────────────────────────
@@ -390,9 +351,9 @@ def init_session():
         "chat_history":     [],   # [{"role": "user"|"bot", "text": str}]
         "chip_selected":    "",
         "pending_query":    "",
-        # TTS / STT
+        # TTS
         "tts_audio":        None,
-        "stt_trigger":      False,
+        "reopen_popup":     False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -517,17 +478,14 @@ def agent_popup():
             st.audio(audio, format="audio/mp3", autoplay=True)
             del st.session_state["tts_audio"]
 
-        for msg in chat_history:
+        for i, msg in enumerate(chat_history):
             if msg["role"] == "user":
                 st.markdown(
                     f'<div class="user-bubble">{msg["text"]}</div>',
                     unsafe_allow_html=True,
                 )
             else:
-                st.markdown(
-                    f'<div class="bot-bubble">💬&nbsp; {msg["text"]}</div>',
-                    unsafe_allow_html=True,
-                )
+                render_bot_message(msg["text"], i)
 
         # navigate 제안 카드 (pending_route 있을 때)
         if st.session_state.get("pending_route"):
@@ -540,8 +498,10 @@ def agent_popup():
                 with yes_col:
                     if st.button("✅ 네, 이동할게요", key="popup_yes",
                                  use_container_width=True, type="primary"):
+                        hl = st.session_state.get("highlight_target")
                         go(st.session_state["pending_route"])
-                        st.session_state["pending_route"] = None
+                        st.session_state["highlight_target"] = hl
+                        st.session_state["reopen_popup"] = True   # 이동 후 팝업 재오픈
                         st.rerun()
                 with no_col:
                     if st.button("❌ 아니오", key="popup_no",
@@ -561,8 +521,17 @@ def agent_popup():
             key="dialog_text_input",
         )
     with col_mic:
-        if st.button("🎤", key="dialog_mic", help="음성 입력 (Chrome 전용)"):
-            st.session_state["stt_trigger"] = True
+        from streamlit_mic_recorder import speech_to_text as _stt  # noqa: PLC0415
+        stt_text = _stt(
+            language="ko-KR",
+            start_prompt="🎤",
+            stop_prompt="⏹",
+            just_once=True,
+            key="stt_dialog",
+        )
+        if stt_text:
+            st.session_state["pending_query"] = stt_text
+            st.session_state.pop("dialog_text_input", None)
             st.rerun()
 
     if st.button("전송 →", key="dialog_send",
@@ -574,6 +543,61 @@ def agent_popup():
             if "dialog_text_input" in st.session_state:
                 del st.session_state["dialog_text_input"]
             st.rerun()
+
+
+# ── SUGGEST 칩 파서/렌더러 ────────────────────────────────────────────────────
+_SUGGEST_RE = re.compile(r"\[SUGGEST:\s*([^|\]]+)\|([^\]]+)\]")
+
+
+def _strip_suggest(text: str) -> str:
+    return _SUGGEST_RE.sub("", text).strip()
+
+
+def render_bot_message(msg: dict, msg_idx: int):
+    """Bot 메시지 렌더링.
+
+    - warnings → > ⚠️ 강조 블록 (tool 구조화 데이터 직접 사용)
+    - suggest_actions → 클릭 가능한 칩 버튼
+    - LLM 텍스트의 [SUGGEST:...] 마커는 보조 fallback으로만 사용
+    """
+    text = msg if isinstance(msg, str) else msg.get("text", "")
+    warnings = [] if isinstance(msg, str) else msg.get("warnings", [])
+    suggest_actions = [] if isinstance(msg, str) else msg.get("suggest_actions", [])
+
+    clean = _strip_suggest(text)
+
+    # 봇 메시지: st.chat_message로 렌더링 → 마크다운 정상 처리 (### h3, **bold** 등)
+    with st.chat_message("assistant", avatar="💬"):
+        st.markdown(clean)
+
+    # 경고사항 — 각 항목을 개별 st.markdown() 호출로 분리 (줄바꿈 보장)
+    if warnings:
+        for w in warnings:
+            st.markdown(
+                f'<div style="background:#FFF3E0;border-left:4px solid #FF8C00;'
+                f'padding:8px 12px;margin:3px 0;border-radius:0 6px 6px 0;'
+                f'font-size:13px;line-height:1.6;word-break:keep-all;'
+                f'overflow-wrap:break-word;">⚠️ {w}</div>',
+                unsafe_allow_html=True,
+            )
+
+    # 추천 다음단계 칩 (structured 우선, fallback → 텍스트 파싱)
+    chips = [(a["route"], a["label"]) for a in suggest_actions]
+    if not chips:
+        chips = [(r.strip(), l.strip()) for r, l in _SUGGEST_RE.findall(text)]
+
+    if chips:
+        st.markdown('<div class="chip-row">', unsafe_allow_html=True)
+        cols = st.columns(min(len(chips), 3))
+        for col, (route, label) in zip(cols, chips):
+            with col:
+                if st.button(label, key=f"sug_{msg_idx}_{route}", use_container_width=True):
+                    hl = st.session_state.get("highlight_target")
+                    go(route)
+                    st.session_state["highlight_target"] = hl
+                    st.session_state["reopen_popup"] = True
+                    st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ── FAB 플로팅 버튼 ───────────────────────────────────────────────────────────
@@ -913,10 +937,22 @@ def screen_my_assets():
         st.markdown('<hr style="margin:4px 0;border-color:#F0F0F0">', unsafe_allow_html=True)
 
 
+def _resolve_screen(route: str):
+    """SCREEN_MAP에 없는 route를 prefix 매칭으로 fallback."""
+    if route in SCREEN_MAP:
+        return SCREEN_MAP[route]
+    if route.startswith("financial_products"):
+        return screen_financial_products
+    return screen_home
+
+
 SCREEN_MAP = {
     "home":                     screen_home,
     "financial_products":       screen_financial_products,
     "financial_products/isa":   screen_isa,
+    # navigate_ui 실제 반환 route 별칭
+    "financial_products/retirement_pension":          screen_retirement_pension,
+    "financial_products/fund/investment_profile":     screen_investment_diagnosis,
     "retirement_pension":       screen_retirement_pension,
     "irp_new":                  screen_irp_new,
     "irp_tax_saving":           screen_irp_tax_saving,
@@ -925,6 +961,8 @@ SCREEN_MAP = {
     "investment_diagnosis":     screen_investment_diagnosis,
     "pension_design":           screen_pension_design,
     "my_assets":                screen_my_assets,
+    "my_products":              screen_my_assets,
+    "my_products/account":      screen_my_assets,
 }
 
 # ── 동의 UI ───────────────────────────────────────────────────────────────────
@@ -961,26 +999,10 @@ def main():
     init_session()
     st.markdown(NH_CSS + DIALOG_CSS, unsafe_allow_html=True)
 
-    # ── STT 결과 query param 처리 ──
-    stt_result = st.query_params.get("stt", "")
-    stt_cancel = st.query_params.get("stt_cancel", "")
-    if stt_result or stt_cancel:
-        st.query_params.clear()
-        st.session_state["stt_trigger"] = False
-        if stt_result:
-            st.session_state["pending_query"] = stt_result
-        st.rerun()
-
-    # ── STT 위젯 표시 (마이크 버튼 클릭 후) ──
-    if st.session_state.get("stt_trigger"):
-        render_stt_widget()
-        if st.button("취소", key="stt_cancel_main"):
-            st.session_state["stt_trigger"] = False
-            st.rerun()
-        # STT가 활성 상태일 때는 나머지 UI 렌더링 생략
-        render_tab_bar()
-        render_fab()
-        return
+    # ── 화면 이동 후 팝업 재오픈 (에이전트 대화 유지) ──
+    if st.session_state.get("reopen_popup"):
+        st.session_state["reopen_popup"] = False
+        agent_popup()
 
     # ── pending_query → ADK 에이전트 실행 ──
     query = st.session_state.get("pending_query", "")
@@ -989,13 +1011,18 @@ def main():
         st.session_state["chat_history"].append({"role": "user", "text": query})
         with st.spinner("도우미가 답변을 준비하고 있습니다..."):
             result = run_agent(query)
-        st.session_state["chat_history"].append({"role": "bot", "text": result["text"]})
+        st.session_state["chat_history"].append({
+            "role": "bot",
+            "text": result["text"],
+            "warnings": result.get("warnings", []),
+            "suggest_actions": result.get("suggest_actions", []),
+        })
         if result["route"]:
             st.session_state["pending_route"]   = result["route"]
             st.session_state["pending_consent"] = result["consent"]
             st.session_state["highlight_target"] = result["highlight"]
-        # TTS 생성 (응답 텍스트 → 음성)
-        audio = tts_audio_bytes(result["text"])
+        # TTS 생성 — SUGGEST 마커 제거 후 음성 변환
+        audio = tts_audio_bytes(_strip_suggest(result["text"]))
         if audio:
             st.session_state["tts_audio"] = audio
         agent_popup()   # 응답 확인을 위해 팝업 재오픈
@@ -1003,8 +1030,7 @@ def main():
     render_header()
 
     route = st.session_state["current_route"]
-    screen_fn = SCREEN_MAP.get(route, screen_home)
-    screen_fn()
+    _resolve_screen(route)()
 
     render_tab_bar()   # 항상 마지막 — CSS :has(#tab-bar-marker) 의 last-child 매칭
     render_fab()

@@ -13,6 +13,7 @@ dependencies = [
     "streamlit>=1.38.0",
     "agentops>=0.3.16",
     "gtts>=2.5.4",
+    "streamlit-mic-recorder>=0.0.4",
     "pykrx>=1.2.4",
     "finance-datareader>=0.9.110",
     "networkx>=3.4.2",
