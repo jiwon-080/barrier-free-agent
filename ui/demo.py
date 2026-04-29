@@ -75,6 +75,11 @@ div:has(> button[key="home_agent_banner"]) button {{
     padding: 12px 20px !important;
     box-shadow: none !important;
 }}
+
+/* 약관 AI 형광펜 */
+mark.hl-red    {{ background: #FFCCCC; color: #8B0000; padding: 0 3px; border-radius: 2px; }}
+mark.hl-orange {{ background: #FFE0B2; color: #7A3B00; padding: 0 3px; border-radius: 2px; }}
+mark.hl-yellow {{ background: #FFF9C4; color: #4B3800; padding: 0 3px; border-radius: 2px; }}
 </style>
 """
 
@@ -248,21 +253,93 @@ def _active_tab(route: str) -> str:
 
 # ── ADK Agent 러너 ────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
-def _get_runner() -> Runner:
-    from app.agent import root_agent
+def _get_session_service() -> InMemorySessionService:
     svc = InMemorySessionService()
     svc.create_session_sync(
         app_name="app", user_id="demo_user", session_id="demo_session"
     )
-    return Runner(agent=root_agent, session_service=svc, app_name="app")
+    return svc
+
+@st.cache_resource(show_spinner=False)
+def _get_runner() -> Runner:
+    from app.agent import root_agent
+    return Runner(agent=root_agent, session_service=_get_session_service(), app_name="app")
+
+def get_user_profile() -> dict:
+    """ADK 세션 state에서 사용자 프로필 읽기."""
+    try:
+        svc = _get_session_service()
+        session = svc.get_session_sync(
+            app_name="app", user_id="demo_user", session_id="demo_session"
+        )
+        if session is None:
+            return {}
+        return {
+            "investment_profile": session.state.get("user:investment_profile", ""),
+            "product_interests":  session.state.get("user:product_interests", []),
+        }
+    except Exception:
+        return {}
+
+
+@st.cache_resource(show_spinner=False)
+def _get_terms_runner() -> Runner:
+    from app.terms_agent import terms_analyzer_agent  # noqa: PLC0415
+    svc = InMemorySessionService()
+    svc.create_session_sync(
+        app_name="terms_app", user_id="demo_user", session_id="terms_session"
+    )
+    return Runner(agent=terms_analyzer_agent, session_service=svc, app_name="terms_app")
+
+
+@st.cache_data(show_spinner=False)
+def analyze_terms() -> str:
+    """TermsAnalyzerAgent를 실행해 mark 태그가 포함된 약관 HTML을 반환합니다."""
+    runner = _get_terms_runner()
+    message = genai_types.Content(
+        role="user", parts=[genai_types.Part.from_text(text="약관을 분석해주세요.")]
+    )
+    result_text = ""
+    for event in runner.run(
+        new_message=message,
+        user_id="demo_user",
+        session_id="terms_session",
+        run_config=RunConfig(streaming_mode=StreamingMode.NONE),
+    ):
+        if event.is_final_response() and event.content and event.content.parts:
+            result_text = "".join(p.text for p in event.content.parts if p.text)
+    return result_text or "(분석 결과를 가져오지 못했습니다.)"
+
+
+@st.dialog("IRP 상품설명서 — AI 위험 분석")
+def show_terms_dialog():
+    st.markdown(
+        '<div style="font-size:12px;line-height:1.7;margin-bottom:10px;">'
+        '🤖 AI가 주요 위험 조항을 자동으로 표시했습니다.<br>'
+        '<mark class="hl-red">빨강</mark> 원금손실·예금자보호 미적용 &nbsp;'
+        '<mark class="hl-orange">주황</mark> 수수료·해지불이익 &nbsp;'
+        '<mark class="hl-yellow">노랑</mark> 과세·의무기간·수령조건'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    with st.spinner("AI가 약관을 분석하고 있습니다..."):
+        html = analyze_terms()
+    st.markdown(
+        f'<div style="font-size:13px;line-height:1.9;white-space:pre-wrap;'
+        f'word-break:keep-all;overflow-wrap:break-word;">{html}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def run_agent(query: str) -> dict:
     """ADK 에이전트 실행 → {"text", "route", "consent", "highlight", "warnings", "suggest_actions"}"""
     result = {
         "text": "", "route": None, "consent": "", "highlight": None,
-        "warnings": [], "suggest_actions": [],
+        "warnings": [], "suggest_actions": [], "nav_steps": [],
     }
+    _irp_called = False
+    _isa_called = False
+    _nav_called = False
     try:
         runner = _get_runner()
         message = genai_types.Content(
@@ -276,14 +353,17 @@ def run_agent(query: str) -> dict:
         ):
             for fc in (event.get_function_calls() or []):
                 if fc.name == "navigate_ui":
+                    _nav_called = True
                     nav = navigate_ui(fc.args.get("screen_name", ""))
                     if nav.get("type") == "navigation":
-                        result["route"]     = nav["route"]
-                        result["consent"]   = nav["consent_message"]
-                        result["highlight"] = nav.get("highlight_target")
+                        result["route"]      = nav["route"]
+                        result["consent"]    = nav["consent_message"]
+                        result["highlight"]  = nav.get("highlight_target")
+                        result["nav_steps"]  = nav.get("steps", [])
 
                 # 구조화 도구 인터셉트 — LLM 텍스트 포맷에 의존하지 않고 직접 추출
                 elif fc.name == "get_isa_info":
+                    _isa_called = True
                     from app.product_tool import get_isa_info  # noqa: PLC0415
                     info = get_isa_info(fc.args.get("isa_type", "전체"))
                     if isinstance(info, dict):
@@ -291,6 +371,7 @@ def run_agent(query: str) -> dict:
                         result["suggest_actions"] = info.get("추천다음단계", [])
 
                 elif fc.name == "get_irp_info":
+                    _irp_called = True
                     from app.product_tool import get_irp_info  # noqa: PLC0415
                     info = get_irp_info()
                     if isinstance(info, dict):
@@ -301,6 +382,25 @@ def run_agent(query: str) -> dict:
                 result["text"] = "".join(
                     p.text for p in event.content.parts if p.text
                 )
+
+        # 안전장치: 정보 도구는 호출했으나 navigate_ui를 에이전트가 누락한 경우 자동 보완
+        if not _nav_called:
+            _NAV_KW = ["가입", "만들", "개설", "시작", "하고 싶", "할래", "원해", "신청"]
+            if _irp_called and any(kw in query for kw in _NAV_KW):
+                _auto = navigate_ui("IRP 신규가입")
+                if _auto.get("type") == "navigation":
+                    result["route"]     = _auto["route"]
+                    result["consent"]   = _auto["consent_message"]
+                    result["highlight"] = _auto.get("highlight_target")
+                    result["nav_steps"] = _auto.get("steps", [])
+            elif _isa_called and any(kw in query for kw in _NAV_KW):
+                _auto = navigate_ui("ISA 신규가입")
+                if _auto.get("type") == "navigation":
+                    result["route"]     = _auto["route"]
+                    result["consent"]   = _auto["consent_message"]
+                    result["highlight"] = _auto.get("highlight_target")
+                    result["nav_steps"] = _auto.get("steps", [])
+
     except Exception as e:
         result["text"] = f"오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n({e!s:.120})"
 
@@ -347,6 +447,10 @@ def init_session():
         "pending_consent":  "",
         "pending_voice":    "",
         "agent_message":    "",
+        # 멀티스텝 내비게이션
+        "nav_steps":        [],
+        "nav_step_idx":     0,
+        "pending_nav_steps": [],
         # 에이전트 팝업
         "chat_history":     [],   # [{"role": "user"|"bot", "text": str}]
         "chip_selected":    "",
@@ -363,16 +467,59 @@ def init_session():
 def go(route: str):
     st.session_state["history"].append(st.session_state["current_route"])
     st.session_state["current_route"] = route
-    st.session_state["highlight_target"] = None
     st.session_state["pending_route"] = None
+
+    nav_steps = st.session_state.get("nav_steps", [])
+    nav_idx = st.session_state.get("nav_step_idx", 0)
+    if nav_steps:
+        next_idx = nav_idx + 1
+        if next_idx < len(nav_steps) and nav_steps[next_idx]["route"] == route:
+            if next_idx == len(nav_steps) - 1:
+                # 마지막 단계 도착 — 시퀀스 종료, 목적지 하이라이트만 유지
+                st.session_state["nav_steps"] = []
+                st.session_state["nav_step_idx"] = 0
+                st.session_state["highlight_target"] = nav_steps[next_idx].get("highlight")
+            else:
+                st.session_state["nav_step_idx"] = next_idx
+                st.session_state["highlight_target"] = nav_steps[next_idx].get("highlight")
+        else:
+            # 경로 이탈 — 시퀀스 종료
+            st.session_state["nav_steps"] = []
+            st.session_state["nav_step_idx"] = 0
+            st.session_state["highlight_target"] = None
+    else:
+        st.session_state["highlight_target"] = None
 
 def go_back():
     if st.session_state["history"]:
         st.session_state["current_route"] = st.session_state["history"].pop()
         st.session_state["highlight_target"] = None
+        st.session_state["nav_steps"] = []
+        st.session_state["nav_step_idx"] = 0
 
 def is_hl(label: str) -> bool:
     return st.session_state.get("highlight_target") == label
+
+def render_nav_badge():
+    nav_steps = st.session_state.get("nav_steps", [])
+    if not nav_steps:
+        return
+    idx = st.session_state.get("nav_step_idx", 0)
+    if idx >= len(nav_steps):
+        return
+    step = nav_steps[idx]
+    total = len(nav_steps)
+    instruction = step.get("instruction", "")
+    st.markdown(
+        f'<div style="position:fixed;top:54px;left:50%;transform:translateX(-50%);'
+        f'width:438px;max-width:calc(100vw - 4px);background:{NH_HIGHLIGHT};color:white;'
+        f'padding:8px 16px;z-index:997;border-radius:0 0 8px 8px;'
+        f'text-align:center;font-size:13px;font-weight:700;'
+        f'box-shadow:0 3px 10px rgba(255,107,0,0.4);">'
+        f'{idx + 1}/{total}단계 &nbsp;👇&nbsp; {instruction}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
 # ── 공통 헤더 ─────────────────────────────────────────────────────────────────
 def render_header():
@@ -415,7 +562,7 @@ def menu_item(label: str, route: str, icon: str = ""):
 
     if highlighted:
         st.markdown(
-            f'<div class="nh-highlight">👆 <b>{label}</b> 을(를) 눌러주세요!</div>',
+            f'<div class="nh-highlight">👇 <b>{label}</b> 을(를) 눌러주세요!</div>',
             unsafe_allow_html=True,
         )
 
@@ -449,6 +596,21 @@ def agent_popup():
             unsafe_allow_html=True,
         )
 
+        # 사용자 프로필 칩 (파악된 데이터가 있을 때만)
+        profile = get_user_profile()
+        inv = profile.get("investment_profile", "")
+        interests = profile.get("product_interests", [])
+        if inv or interests:
+            chip_parts = ([inv] if inv else []) + interests[:3]
+            st.markdown(
+                f'<div style="background:{NH_LIGHT_GREEN};border-radius:20px;'
+                f'padding:5px 14px;font-size:12px;color:{NH_GREEN};'
+                f'font-weight:600;display:inline-block;">'
+                f'👤 {" · ".join(chip_parts)}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
         st.markdown(
             '<div style="color:#555;font-size:12px;font-weight:600;margin-bottom:6px;">'
             '이런 걸 물어보세요</div>',
@@ -478,16 +640,7 @@ def agent_popup():
             st.audio(audio, format="audio/mp3", autoplay=True)
             del st.session_state["tts_audio"]
 
-        for i, msg in enumerate(chat_history):
-            if msg["role"] == "user":
-                st.markdown(
-                    f'<div class="user-bubble">{msg["text"]}</div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                render_bot_message(msg["text"], i)
-
-        # navigate 제안 카드 (pending_route 있을 때)
+        # ── 화면 이동 동의 카드 — 다이얼로그 최상단에 표시 ──
         if st.session_state.get("pending_route"):
             with st.container(border=True):
                 st.markdown(
@@ -498,16 +651,38 @@ def agent_popup():
                 with yes_col:
                     if st.button("✅ 네, 이동할게요", key="popup_yes",
                                  use_container_width=True, type="primary"):
-                        hl = st.session_state.get("highlight_target")
-                        go(st.session_state["pending_route"])
-                        st.session_state["highlight_target"] = hl
-                        st.session_state["reopen_popup"] = True   # 이동 후 팝업 재오픈
+                        nav_steps = st.session_state.get("pending_nav_steps", [])
+                        if len(nav_steps) > 1:
+                            st.session_state["nav_steps"] = nav_steps
+                            st.session_state["nav_step_idx"] = 0
+                            first = nav_steps[0]
+                            st.session_state["history"].append(st.session_state["current_route"])
+                            st.session_state["current_route"] = first["route"]
+                            st.session_state["highlight_target"] = first.get("highlight")
+                            st.session_state["pending_nav_steps"] = []
+                            st.session_state["reopen_popup"] = False
+                        else:
+                            hl = st.session_state.get("highlight_target")
+                            go(st.session_state["pending_route"])
+                            st.session_state["highlight_target"] = hl
+                            st.session_state["reopen_popup"] = True
+                        st.session_state["pending_route"] = None
                         st.rerun()
                 with no_col:
                     if st.button("❌ 아니오", key="popup_no",
                                  use_container_width=True):
                         st.session_state["pending_route"] = None
                         st.rerun()
+            st.divider()
+
+        for i, msg in enumerate(chat_history):
+            if msg["role"] == "user":
+                st.markdown(
+                    f'<div class="user-bubble">{msg["text"]}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                render_bot_message(msg, i)
 
         st.divider()
 
@@ -553,6 +728,16 @@ def _strip_suggest(text: str) -> str:
     return _SUGGEST_RE.sub("", text).strip()
 
 
+def _strip_markdown_for_tts(text: str) -> str:
+    text = _strip_suggest(text)
+    text = re.sub(r"#{1,6}\s*", "", text)       # ### 헤더
+    text = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", text)  # **bold** / *italic*
+    text = re.sub(r"`([^`]+)`", r"\1", text)    # `code`
+    text = re.sub(r"^>\s*", "", text, flags=re.MULTILINE)  # > 인용
+    text = re.sub(r"^[-*]\s+", "", text, flags=re.MULTILINE)  # - 목록
+    return text.strip()
+
+
 def render_bot_message(msg: dict, msg_idx: int):
     """Bot 메시지 렌더링.
 
@@ -565,8 +750,9 @@ def render_bot_message(msg: dict, msg_idx: int):
     suggest_actions = [] if isinstance(msg, str) else msg.get("suggest_actions", [])
 
     clean = _strip_suggest(text)
+    # 단일 \n → \n\n 으로 정규화 (마크다운은 빈 줄이 있어야 단락 구분됨)
+    clean = re.sub(r'(?<!\n)\n(?!\n)', '\n\n', clean)
 
-    # 봇 메시지: st.chat_message로 렌더링 → 마크다운 정상 처리 (### h3, **bold** 등)
     with st.chat_message("assistant", avatar="💬"):
         st.markdown(clean)
 
@@ -586,15 +772,29 @@ def render_bot_message(msg: dict, msg_idx: int):
     if not chips:
         chips = [(r.strip(), l.strip()) for r, l in _SUGGEST_RE.findall(text)]
 
+    # irp_new / ISA 가입 칩은 consent + nav_steps flow로 처리
+    _CHIP_CONSENT_MAP = {
+        "irp_new": "IRP 신규가입",
+        "financial_products/isa": "ISA 신규가입",
+    }
+
     if chips:
         st.markdown('<div class="chip-row">', unsafe_allow_html=True)
         cols = st.columns(min(len(chips), 3))
         for col, (route, label) in zip(cols, chips):
             with col:
                 if st.button(label, key=f"sug_{msg_idx}_{route}", use_container_width=True):
-                    hl = st.session_state.get("highlight_target")
-                    go(route)
-                    st.session_state["highlight_target"] = hl
+                    if route in _CHIP_CONSENT_MAP:
+                        _nav = navigate_ui(_CHIP_CONSENT_MAP[route])
+                        if _nav.get("type") == "navigation":
+                            st.session_state["pending_route"]     = _nav["route"]
+                            st.session_state["pending_consent"]   = _nav["consent_message"]
+                            st.session_state["highlight_target"]  = _nav.get("highlight_target")
+                            st.session_state["pending_nav_steps"] = _nav.get("steps", [])
+                    else:
+                        hl = st.session_state.get("highlight_target")
+                        go(route)
+                        st.session_state["highlight_target"] = hl
                     st.session_state["reopen_popup"] = True
                     st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -603,7 +803,7 @@ def render_bot_message(msg: dict, msg_idx: int):
 # ── FAB 플로팅 버튼 ───────────────────────────────────────────────────────────
 def render_fab():
     st.markdown('<div class="fab-wrapper">', unsafe_allow_html=True)
-    if st.button("💬", key="fab_agent", help="배리어프리 도우미"):
+    if st.button("🦖", key="fab_agent", help="배리어프리 도우미"):
         agent_popup()
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -661,6 +861,24 @@ def screen_home():
     ):
         agent_popup()
 
+    # 사용자 맞춤 프로필 카드 (데이터가 있을 때만)
+    profile = get_user_profile()
+    inv = profile.get("investment_profile", "")
+    interests = profile.get("product_interests", [])
+    if inv or interests:
+        parts = []
+        if inv:
+            parts.append(f"**{inv}**")
+        if interests:
+            parts.append(" · ".join(interests[:4]))
+        st.markdown(
+            f'<div style="background:{NH_LIGHT_GREEN};border-left:3px solid {NH_GREEN};'
+            f'padding:8px 12px;border-radius:0 6px 6px 0;font-size:13px;margin:4px 0;">'
+            f'👤 맞춤 정보: {" &nbsp;|&nbsp; ".join(parts)}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
     st.markdown("#### 빠른 메뉴")
     _QUICK = [
         ("🏦", "전체계좌조회", None),
@@ -709,6 +927,12 @@ def screen_financial_products():
     cols = st.columns(4)
     for i, (icon, label, route) in enumerate(_PRODUCTS):
         with cols[i % 4]:
+            if is_hl(label):
+                st.markdown(
+                    '<div class="nh-highlight" style="text-align:center;'
+                    'font-size:11px;margin-bottom:2px;padding:4px 2px;">👇 눌러주세요</div>',
+                    unsafe_allow_html=True,
+                )
             clicked = st.button(
                 f"{icon}\n{label}",
                 key=f"fp_{label}",
@@ -749,8 +973,6 @@ def screen_irp_new():
 
 # ── 화면: 개인형 IRP 세액공제용 (최종 목적지) ────────────────────────────────
 def screen_irp_tax_saving():
-    st.success("✅ IRP 세액공제용 가입 화면에 도착했습니다.")
-
     with st.container(border=True):
         st.markdown("#### 개인형 IRP — 세액공제용")
         c1, c2 = st.columns(2)
@@ -760,10 +982,22 @@ def screen_irp_tax_saving():
             st.metric("세액공제율", "13.2 ~ 16.5%")
         st.caption("만 55세 이후 연금 형태로 수령 가능")
 
+    if is_hl("가입확인"):
+        st.markdown(
+            '<div class="nh-highlight">👇 아래 항목을 꼼꼼히 읽고 확인해 주세요!</div>',
+            unsafe_allow_html=True,
+        )
     st.markdown("#### 가입 전 필수 확인")
-    chk1 = st.checkbox("투자 위험 등급 확인 (필수)")
-    chk2 = st.checkbox("상품 설명서 확인 (필수)")
-    chk3 = st.checkbox("적합성 진단 완료 (필수)")
+    chk1 = st.checkbox("투자 위험 등급 확인 (필수)", key="irp_chk1")
+
+    chk2_col, btn_col = st.columns([4, 1])
+    with chk2_col:
+        chk2 = st.checkbox("상품 설명서 확인 (필수)", key="irp_chk2")
+    with btn_col:
+        if st.button("보기", key="irp_terms_btn", use_container_width=True):
+            show_terms_dialog()
+
+    chk3 = st.checkbox("적합성 진단 완료 (필수)", key="irp_chk3")
 
     st.button(
         "다음 단계로 →",
@@ -883,7 +1117,6 @@ def screen_isa():
                 "- 손익 통산 후 순이익 200만원까지 비과세\n"
                 "- 의무 가입 기간: **3년**"
             )
-        st.button("ISA 신탁형 가입 →", type="primary", use_container_width=True, key="isa_trust_join")
 
     with tab_managed:
         st.markdown("#### ISA 일임형")
@@ -899,14 +1132,33 @@ def screen_isa():
                 "- 서민·농어민형: 비과세 400만원\n"
                 "- 의무 가입 기간: **3년**"
             )
-        risk = st.select_slider(
+        st.select_slider(
             "투자 성향 선택",
             options=["초저위험", "저위험", "중위험", "고위험", "초고위험"],
             value="중위험",
             key="isa_risk",
         )
-        st.button(f"ISA 일임형 ({risk}) 가입 →", type="primary",
-                  use_container_width=True, key="isa_managed_join")
+
+    # ── 가입 전 필수 확인 (탭 외부) ──────────────────────────────────────────
+    st.markdown("#### 가입 전 필수 확인")
+    isa_chk1 = st.checkbox("투자 위험 등급 확인 (필수)", key="isa_chk1")
+
+    isa_chk2_col, isa_btn_col = st.columns([4, 1])
+    with isa_chk2_col:
+        isa_chk2 = st.checkbox("상품 설명서 확인 (필수)", key="isa_chk2")
+    with isa_btn_col:
+        if st.button("보기", key="isa_terms_btn", use_container_width=True):
+            show_terms_dialog()
+
+    isa_chk3 = st.checkbox("적합성 진단 완료 (필수)", key="isa_chk3")
+
+    st.button(
+        "ISA 가입 신청 →",
+        type="primary",
+        use_container_width=True,
+        key="isa_join_btn",
+        disabled=not (isa_chk1 and isa_chk2 and isa_chk3),
+    )
 
 
 # ── 화면: 내 자산 ────────────────────────────────────────────────────────────
@@ -1018,16 +1270,18 @@ def main():
             "suggest_actions": result.get("suggest_actions", []),
         })
         if result["route"]:
-            st.session_state["pending_route"]   = result["route"]
-            st.session_state["pending_consent"] = result["consent"]
+            st.session_state["pending_route"]    = result["route"]
+            st.session_state["pending_consent"]  = result["consent"]
             st.session_state["highlight_target"] = result["highlight"]
+            st.session_state["pending_nav_steps"] = result.get("nav_steps", [])
         # TTS 생성 — SUGGEST 마커 제거 후 음성 변환
-        audio = tts_audio_bytes(_strip_suggest(result["text"]))
+        audio = tts_audio_bytes(_strip_markdown_for_tts(result["text"]))
         if audio:
             st.session_state["tts_audio"] = audio
         agent_popup()   # 응답 확인을 위해 팝업 재오픈
 
     render_header()
+    render_nav_badge()
 
     route = st.session_state["current_route"]
     _resolve_screen(route)()
