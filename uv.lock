@@ -398,6 +398,7 @@ dependencies = [
     { name = "opentelemetry-instrumentation-google-genai" },
     { name = "pdfplumber" },
     { name = "pykrx" },
+    { name = "python-dotenv" },
     { name = "streamlit" },
     { name = "streamlit-mic-recorder" },
 ]
@@ -437,6 +438,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-google-genai", specifier = ">=0.1.0,<1.0.0" },
     { name = "pdfplumber", specifier = ">=0.11.9" },
     { name = "pykrx", specifier = ">=1.2.4" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.4.6,<1.0.0" },
     { name = "streamlit", specifier = ">=1.38.0" },
     { name = "streamlit-mic-recorder", specifier = ">=0.0.4" },

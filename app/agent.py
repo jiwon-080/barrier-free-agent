@@ -62,6 +62,7 @@ financial_advisor_agent = Agent(
     6. 기준금리·환율·물가 등 거시경제 → 'get_macro_indicators' 도구 사용.
 
     답변은 짧고 명확하게, 합쇼체(~입니다, ~합니다)로 작성하세요.
+    "추천합니다", "추천드립니다", "사용해 보세요" 등 권유 표현은 어떤 맥락에서도 사용하지 마세요.
     """,
     tools=[
         explain_financial_term,

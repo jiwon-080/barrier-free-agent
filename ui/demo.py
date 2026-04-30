@@ -354,9 +354,6 @@ def run_agent(query: str, on_step=None) -> dict:
         "text": "", "route": None, "consent": "", "highlight": None,
         "warnings": [], "suggest_actions": [], "nav_steps": [],
     }
-    _irp_called = False
-    _isa_called = False
-    _nav_called = False
     try:
         runner = _get_runner()
         message = genai_types.Content(
@@ -372,7 +369,6 @@ def run_agent(query: str, on_step=None) -> dict:
                 if on_step and fc.name in _TOOL_LABELS:
                     on_step(_TOOL_LABELS[fc.name])
                 if fc.name == "navigate_ui":
-                    _nav_called = True
                     nav = navigate_ui(fc.args.get("screen_name", ""))
                     if nav.get("type") == "navigation":
                         result["route"]      = nav["route"]
@@ -382,7 +378,6 @@ def run_agent(query: str, on_step=None) -> dict:
 
                 # 구조화 도구 인터셉트 — LLM 텍스트 포맷에 의존하지 않고 직접 추출
                 elif fc.name == "get_isa_info":
-                    _isa_called = True
                     from app.product_tool import get_isa_info  # noqa: PLC0415
                     info = get_isa_info(fc.args.get("isa_type", "전체"))
                     if isinstance(info, dict):
@@ -390,7 +385,6 @@ def run_agent(query: str, on_step=None) -> dict:
                         result["suggest_actions"] = info.get("추천다음단계", [])
 
                 elif fc.name == "get_irp_info":
-                    _irp_called = True
                     from app.product_tool import get_irp_info  # noqa: PLC0415
                     info = get_irp_info()
                     if isinstance(info, dict):
@@ -401,24 +395,6 @@ def run_agent(query: str, on_step=None) -> dict:
                 result["text"] = "".join(
                     p.text for p in event.content.parts if p.text
                 )
-
-        # 안전장치: 정보 도구는 호출했으나 navigate_ui를 에이전트가 누락한 경우 자동 보완
-        if not _nav_called:
-            _NAV_KW = ["가입", "만들", "개설", "시작", "하고 싶", "할래", "원해", "신청"]
-            if _irp_called and any(kw in query for kw in _NAV_KW):
-                _auto = navigate_ui("IRP 신규가입")
-                if _auto.get("type") == "navigation":
-                    result["route"]     = _auto["route"]
-                    result["consent"]   = _auto["consent_message"]
-                    result["highlight"] = _auto.get("highlight_target")
-                    result["nav_steps"] = _auto.get("steps", [])
-            elif _isa_called and any(kw in query for kw in _NAV_KW):
-                _auto = navigate_ui("ISA 신규가입")
-                if _auto.get("type") == "navigation":
-                    result["route"]     = _auto["route"]
-                    result["consent"]   = _auto["consent_message"]
-                    result["highlight"] = _auto.get("highlight_target")
-                    result["nav_steps"] = _auto.get("steps", [])
 
     except Exception as e:
         result["text"] = f"오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n({e!s:.120})"
@@ -1158,6 +1134,11 @@ def screen_pension_design():
 
 # ── 화면: ISA ────────────────────────────────────────────────────────────────
 def screen_isa():
+    if is_hl("ISA가입"):
+        st.markdown(
+            '<div class="nh-highlight">👇 <b>신탁형</b> 또는 <b>일임형</b> 중 하나를 선택해 주세요. 차이가 궁금하시면 물어보세요!</div>',
+            unsafe_allow_html=True,
+        )
     tab_trust, tab_managed = st.tabs(["신탁형", "일임형"])
 
     with tab_trust:
@@ -1197,6 +1178,11 @@ def screen_isa():
         )
 
     # ── 가입 전 필수 확인 (탭 외부) ──────────────────────────────────────────
+    if is_hl("ISA가입"):
+        st.markdown(
+            '<div class="nh-highlight">👇 아래 항목을 꼼꼼히 읽고 확인해 주세요!</div>',
+            unsafe_allow_html=True,
+        )
     st.markdown("#### 가입 전 필수 확인")
     isa_chk1 = st.checkbox("투자 위험 등급 확인 (필수)", key="isa_chk1")
 

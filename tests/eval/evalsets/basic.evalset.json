@@ -14,7 +14,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "explain_financial_term", "args": {"term": "IRP"}}
+              {"name": "financial_advisor_agent", "args": {}}
             ]
           },
           "final_response": {
@@ -36,7 +36,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "explain_financial_term", "args": {"term": "ETF"}}
+              {"name": "financial_advisor_agent", "args": {}}
             ]
           },
           "final_response": {
@@ -58,7 +58,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "explain_financial_term", "args": {"term": "ISA"}}
+              {"name": "financial_advisor_agent", "args": {}}
             ]
           },
           "final_response": {
@@ -80,8 +80,8 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "get_irp_info"},
-              {"name": "navigate_ui"}
+              {"name": "get_irp_info", "args": {}},
+              {"name": "navigate_ui", "args": {}}
             ]
           },
           "final_response": {
@@ -103,8 +103,8 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "get_isa_info"},
-              {"name": "navigate_ui"}
+              {"name": "get_isa_info", "args": {}},
+              {"name": "navigate_ui", "args": {}}
             ]
           }
         }
@@ -122,7 +122,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "get_irp_info"}
+              {"name": "get_irp_info", "args": {}}
             ]
           },
           "final_response": {
@@ -188,7 +188,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "check_investment_guardrail"}
+              {"name": "check_investment_guardrail", "args": {}}
             ]
           },
           "final_response": {
@@ -232,7 +232,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "explain_financial_term", "args": {"term": "아이알피"}}
+              {"name": "financial_advisor_agent", "args": {}}
             ]
           },
           "final_response": {
@@ -254,7 +254,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "get_irp_info"}
+              {"name": "get_irp_info", "args": {}}
             ]
           },
           "final_response": {
@@ -276,8 +276,8 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "get_irp_info"},
-              {"name": "navigate_ui"}
+              {"name": "get_irp_info", "args": {}},
+              {"name": "navigate_ui", "args": {}}
             ]
           },
           "final_response": {
@@ -299,8 +299,8 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "get_isa_info"},
-              {"name": "navigate_ui"}
+              {"name": "get_isa_info", "args": {}},
+              {"name": "navigate_ui", "args": {}}
             ]
           },
           "final_response": {
@@ -322,7 +322,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "financial_advisor_agent"}
+              {"name": "financial_advisor_agent", "args": {}}
             ]
           },
           "final_response": {
@@ -366,7 +366,7 @@
           },
           "intermediate_data": {
             "tool_uses": [
-              {"name": "get_irp_info"}
+              {"name": "get_irp_info", "args": {}}
             ]
           },
           "final_response": {

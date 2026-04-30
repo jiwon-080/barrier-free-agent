@@ -226,7 +226,7 @@ def navigate_ui(screen_name: str) -> dict:
                 "route": "financial_products/isa",
                 "consent_message": "ISA 가입 화면으로 안내해 드릴까요?",
                 "voice_guide": "ISA 가입 화면으로 안내해 드릴게요.",
-                "highlight_target": "ISA",
+                "highlight_target": "ISA가입",
             }
 
     # 키워드 매칭
