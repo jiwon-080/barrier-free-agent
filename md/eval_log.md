@@ -42,18 +42,14 @@ if not _nav_called:
 
 **실패 분석 — `irp_term_explanation`**:
 
-원인 1 — `no_product_recommendation` rubric score 0.0
+원인 — `no_product_recommendation` rubric score 0.0
 - `financial_advisor_agent`가 "추천합니다" 표현을 응답에 포함
 - 새로 추가한 rubric이 잡아낸 실제 품질 문제
-
-원인 2 — `tool_trajectory_avg_precision` score None
-- eval case가 `explain_financial_term` 호출을 기대했으나
-- 멀티에이전트 구조상 `barrier_free_agent` 시점에서는 `financial_advisor_agent` 호출만 관측됨
-- eval case 설계 오류 (outer 에이전트 시점 반영 안 됨)
+- (`tool_trajectory_avg_precision` score None도 관측됐으나 이 메트릭은 pass/fail에 미포함 — 별개 이슈)
 
 **결론**:
 - safety net 제거 성공 — 핵심 시나리오(IRP/ISA 가입 풀플로우)는 LLM이 자력으로 처리
-- 실패 1건은 safety net과 무관한 별도 품질 이슈
+- 실패 1건은 safety net과 무관한 rubric 품질 이슈
 
 ---
 
@@ -94,10 +90,11 @@ if not _nav_called:
 | ↳ `helpfulness` | 유용한 정보를 제공했는가 | — |
 | ↳ `tone_compliance` | 합쇼체(~입니다/합니다) 준수 | — |
 | ↳ `no_product_recommendation` | 투자 추천 표현 없는가 | — |
-| `tool_trajectory_avg_precision` | 기대 도구 호출 순서 일치율 | 0.7 |
+| `tool_trajectory_avg_precision` | 기대 도구 호출 순서 일치율 | — (참고용, pass/fail 미적용) |
 
 ## 설계 원칙 (배운 것)
 
 - **멀티에이전트 eval**: outer 에이전트(`barrier_free_agent`) 시점의 tool_uses만 관측됨. sub-agent 내부 호출(`explain_financial_term`)은 보이지 않으므로 eval case는 `financial_advisor_agent`로 기대값 설정.
+- **tool_trajectory_avg_precision 한계**: 멀티에이전트 구조에서 outer 도구만 관측 가능하고 LLM 호출 순서가 non-deterministic해서 신뢰도가 낮음. `eval_config.json`에 미포함 — 계산은 되지만 pass/fail 판정에 영향 없음. 참고용으로만 활용.
 - **safety net 측정**: `irp_signup_full_flow` / `isa_signup_full_flow` 케이스가 safety net 제거 후에도 PASS이면 LLM이 자력 처리 가능하다는 증거.
 - **rubric 추가 시**: 기존 통과 케이스가 새 rubric에서 실패할 수 있음 → 추가 후 full run 필수.
