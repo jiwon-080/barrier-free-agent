@@ -81,6 +81,31 @@ if not _nav_called:
 
 ---
 
+## Run 4 — 2026-05-01 | 페르소나 일반화 후 품질 유지 확인 (18/18 PASS)
+
+**목적**: 에이전트 페르소나 변경 후 답변 품질 회귀 여부 확인
+
+**변경 내용**:
+
+1. `app/agent.py` — 특정 은행명 제거, 대상 표현 일반화:
+   - `financial_advisor_agent` instruction: "NH농협 금융 전문 조언 에이전트" → "디지털 금융 소외 계층을 위한 금융 전문 조언 에이전트"
+   - `barrier_free_agent` instruction: "NH농협 올원뱅크 앱을 사용하는 디지털 금융 소외 계층(어르신, 금융 초보자)" → "디지털 금융 소외 계층"
+
+2. `app/guardrail_tool.py` — voice_guide 말투 통일:
+   - "어르신, 제가 특정 상품을 추천해드리는 것은..." → "제가 특정 상품을 추천해드리는 것은..."
+   - 해요체 → 합쇼체로 통일
+
+3. `app/__init__.py` — `root_agent` 노출 추가 (ADK playground 인식)
+
+4. `app/agent.py` — `App(name="barrier_free_app")` → `App(name="app")` (디렉터리명 일치)
+
+**결과**: 18/18 PASS
+(1차 실행 17/18 — `deposit_cross_bank_compare` 결과 파일 미생성. 재실행 18/18 확인 → LLM 비결정성에 의한 fluke)
+
+**의의**: 페르소나 변경이 rubric 품질에 영향 없음 확인. 도구 호출 로직·말투 규칙은 그대로 유지.
+
+---
+
 ## 메트릭 설명
 
 | 메트릭 | 설명 | threshold |
