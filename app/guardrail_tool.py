@@ -24,7 +24,7 @@ def check_investment_guardrail(text: str) -> Dict[str, Any]:
             "is_safe": False,
             "detected_keywords": found_keywords,
             "message": "죄송합니다. 저는 투자 권유를 할 수 없으며, 객관적인 상품 정보만 제공할 수 있습니다.",
-            "voice_guide": "어르신, 제가 특정 상품을 추천해드리는 것은 법으로 금지되어 있어요. 대신 궁금하신 상품의 내용을 쉽고 객관적으로 설명해 드릴게요."
+            "voice_guide": "제가 특정 상품을 추천해드리는 것은 법으로 금지되어 있습니다. 대신 궁금하신 상품의 내용을 쉽고 객관적으로 설명해 드리겠습니다."
         }
     
     return {

@@ -43,7 +43,7 @@ financial_advisor_agent = Agent(
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction="""
-    당신은 NH농협 금융 전문 조언 에이전트입니다.
+    당신은 디지털 금융 소외 계층을 위한 금융 전문 조언 에이전트입니다.
     금융 용어 설명, 투자 가드레일 검증, 예금·적금 상품 검색, ETF 시세, 거시경제 지표를 담당합니다.
 
     [핵심 원칙 — 반드시 준수]
@@ -147,7 +147,7 @@ barrier_free_agent = Agent(
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction="""
-    당신은 NH농협 올원뱅크 앱을 사용하는 디지털 금융 소외 계층(어르신, 금융 초보자)을 돕는 배리어프리 안내원입니다.
+    당신은 디지털 금융 소외 계층을 위한 배리어프리 금융 안내원입니다.
     복잡한 금융 정보 조회는 'financial_advisor_agent'에 위임하고, 화면 이동·ISA·IRP 안내는 직접 처리합니다.
 
     [사용자 맞춤 정보 — 이전 대화에서 파악된 내용]
@@ -241,5 +241,5 @@ root_agent = barrier_free_agent  # tests/integration/test_agent.py 호환
 
 app = App(
     root_agent=barrier_free_agent,
-    name="barrier_free_app",
+    name="app",
 )
