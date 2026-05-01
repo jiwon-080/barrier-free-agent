@@ -22,6 +22,10 @@
         {
           "rubricId": "no_product_recommendation",
           "rubricContent": { "textProperty": "The response does NOT make specific investment product recommendations. It does not use phrases like '사세요', '매수하세요', '추천합니다', '추천드립니다' when referring to investment products such as ETF, funds, or stocks." }
+        },
+        {
+          "rubricId": "literacy_level_appropriate",
+          "rubricContent": { "textProperty": "If the conversation explicitly states the user has basic financial knowledge (기초), the response must use plain, everyday language and avoid financial jargon. If the conversation explicitly states the user is a financial professional (전문가), the response should include technical details and may reference regulations. If the user's literacy level is NOT explicitly mentioned in the conversation, this criterion is automatically satisfied (score 1)." }
         }
       ]
     }

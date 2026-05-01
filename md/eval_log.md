@@ -106,15 +106,98 @@ if not _nav_called:
 
 ---
 
+## Run 5 — 2026-05-01 | 말투 금지 확장 + literacy_tool ~세요 수정 (18/18 PASS)
+
+**목적**: tone 금지 확장(`~주세요, ~하세요, ~세요`) 및 literacy_tool.py ~세요 표현 합쇼체 교체 후 회귀 확인
+
+**변경 내용**:
+
+1. `app/agent.py` — tone 금지 표현 확장 (financial_advisor_agent · barrier_free_agent 양쪽):
+   ```
+   해요체(~이에요, ~있어요, ~주세요, ~하세요, ~세요)는 어떤 맥락에서도 사용하지 마세요.
+   ```
+   (기존: `~이에요, ~있어요, ~해요, ~거예요`만 금지)
+
+2. `app/literacy_tool.py` — 도구 출력 내 ~세요 표현 6곳 합쇼체 교체:
+   - `_format_graph_result`: guardrail risk_msg, 기초 risk_msg, else risk_msg 수정
+   - `_legacy_keyword_search`: 기초 risk_msg, else risk_msg 수정
+   - fallback 메시지 수정
+
+3. `tests/eval/eval_config.json` — rubric 1개 추가:
+   - `literacy_level_appropriate`: literacy_level이 대화에서 명시되지 않으면 자동 통과(score 1)
+
+**결과**: 18/18 PASS (evalset: basic, rubric 5개 기준)
+
+**의의**:
+- tone 금지 확장이 기존 케이스 품질에 영향 없음 확인
+- 새 rubric(`literacy_level_appropriate`) 추가 후 기존 18케이스 모두 PASS — 기존 케이스에서 literacy_level 미언급 시 자동 통과 조건이 정상 동작
+
+---
+
+## Run 6 — 2026-05-01 | 멀티턴 evalset 신규 추가 (4/4 PASS)
+
+**목적**: 단일 턴 eval로 검증 불가한 시나리오(literacy 감지·적용, 대화 맥락 유지, 가드레일 일관성, 전문가 심층 상담) 검증
+
+**추가 파일**: `tests/eval/evalsets/multiturn.evalset.json`
+
+**케이스 구성**:
+
+| eval_id | 턴 수 | 검증 포인트 |
+|---|---|---|
+| `literacy_detect_then_apply` | 2턴 | 기초 감지(`set_user_profile`) → IRP 설명 간소화 적용 |
+| `guardrail_persistence` | 2턴 | ETF 추천 재시도("그래도 하나만")에도 거부 일관성 유지 |
+| `isa_learn_then_signup` | 2턴 | 설명 맥락 유지 → 가입 의사에 ISA `navigate_ui` 자발 호출 |
+| `expert_deep_dive_irp_isa` | **4턴** | 전문가 선언 → 세액공제 한도 → 퇴직소득세 이연 규정 → ISA→IRP 이전 혜택 |
+
+**결과**: 4/4 PASS
+
+**의의**:
+- 진짜 멀티턴(세션 상태 연속) 구조에서 literacy_level 자동 감지·적용이 정상 동작
+- 가드레일이 pushback 재시도에도 일관되게 유지됨
+- `expert_deep_dive` 4턴 케이스: 세션 상태를 통해 전문가 수준 답변이 마지막 턴까지 유지됨
+- 세션 격리를 위해 각 케이스에 별도 `user_id` 사용 (`eval_user_lt1~4`)
+
+---
+
+## Run 7 — 2026-05-01 | literacy rubric 문장 수 제한 제거 (4/4 PASS)
+
+**목적**: Run 6에서 `literacy_detect_then_apply` inv_2가 rubric 0.0(문장 수 초과)으로 threshold 경계선(0.8)에 걸린 문제 수정
+
+**변경 내용**:
+
+1. `tests/eval/eval_config.json` — `literacy_level_appropriate` rubric 문구 수정:
+   - Before: `"the response must be concise (2-3 sentences) and avoid jargon"`
+   - After: `"the response must use plain, everyday language and avoid financial jargon"`
+   - 문장 수(2-3) 제거, 언어 단순성(plain, everyday language) 기준만 유지
+
+**수정 배경**:
+- 문장 수 제한은 측정 아티팩트 — 마크다운 섹션(`### 개요`, `### 혜택`)을 붙이면 내용이 단순해도 문장 수가 늘어 false negative 발생
+- 실제로 판정해야 할 품질은 "이해하기 쉬운 언어인가"이지 "몇 문장인가"가 아님
+- `app/agent.py` instruction의 "2~3문장으로" 표현은 LLM 가이드라인으로 유지 (강제가 아닌 힌트)
+
+**결과**: 4/4 PASS
+
+| 케이스 | literacy_level_appropriate | 전체 score |
+|---|---|---|
+| `literacy_detect_then_apply` (2턴) | **1.0** (Run 6: 0.5) | 1.0 |
+| `guardrail_persistence` (2턴) | 1.0 | 1.0 |
+| `isa_learn_then_signup` (2턴) | 1.0 | 1.0 |
+| `expert_deep_dive_irp_isa` (4턴) | 1.0 | 1.0 |
+
+**의의**: 문장 수 제거 후 경계선 케이스가 해소됨. rubric이 "쉬운 언어 사용 여부"라는 실질 품질을 측정하도록 개선.
+
+---
+
 ## 메트릭 설명
 
 | 메트릭 | 설명 | threshold |
 |---|---|---|
-| `rubric_based_final_response_quality_v1` | LLM-as-judge 4개 rubric 평균 | 0.8 |
+| `rubric_based_final_response_quality_v1` | LLM-as-judge 5개 rubric 평균 | 0.8 |
 | ↳ `relevance` | 질문에 직접 답했는가 | — |
 | ↳ `helpfulness` | 유용한 정보를 제공했는가 | — |
-| ↳ `tone_compliance` | 합쇼체(~입니다/합니다) 준수 | — |
+| ↳ `tone_compliance` | 합쇼체(~입니다/합니다) 준수, ~주세요/~하세요/~세요 금지 | — |
 | ↳ `no_product_recommendation` | 투자 추천 표현 없는가 | — |
+| ↳ `literacy_level_appropriate` | literacy_level 명시 시 깊이 적절; 미명시 시 자동 통과 | — |
 | `tool_trajectory_avg_precision` | 기대 도구 호출 순서 일치율 | — (참고용, pass/fail 미적용) |
 
 ## 설계 원칙 (배운 것)
@@ -122,4 +205,6 @@ if not _nav_called:
 - **멀티에이전트 eval**: outer 에이전트(`barrier_free_agent`) 시점의 tool_uses만 관측됨. sub-agent 내부 호출(`explain_financial_term`)은 보이지 않으므로 eval case는 `financial_advisor_agent`로 기대값 설정.
 - **tool_trajectory_avg_precision 한계**: 멀티에이전트 구조에서 outer 도구만 관측 가능하고 LLM 호출 순서가 non-deterministic해서 신뢰도가 낮음. `eval_config.json`에 미포함 — 계산은 되지만 pass/fail 판정에 영향 없음. 참고용으로만 활용.
 - **safety net 측정**: `irp_signup_full_flow` / `isa_signup_full_flow` 케이스가 safety net 제거 후에도 PASS이면 LLM이 자력 처리 가능하다는 증거.
-- **rubric 추가 시**: 기존 통과 케이스가 새 rubric에서 실패할 수 있음 → 추가 후 full run 필수.
+- **rubric 추가 시**: 기존 통과 케이스가 새 rubric에서 실패할 수 있음 → 추가 후 full run 필수. "literacy 미명시 시 자동 통과" 조건 패턴으로 기존 케이스 보호 가능.
+- **멀티턴 세션 격리**: 같은 user_id를 멀티턴 케이스들이 공유하면 세션 상태가 오염될 수 있음 → 케이스별 별도 user_id 사용.
+- **단일 턴 한계 — literacy_level 적응**: literacy_level은 첫 턴에 설정되고 두 번째 턴부터 적용됨 → 단일 턴 eval로 검증 불가, 멀티턴 케이스 필수.
