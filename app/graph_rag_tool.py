@@ -114,13 +114,17 @@ def _find_start_nodes(query: str, G, top_k: int = 3) -> list[str]:
     return candidates
 
 
-def graph_search(query: str, depth: int = 2) -> dict:
+_LITERACY_DEPTH = {"기초": 1, "일반": 2, "전문가": 3}
+_LITERACY_RELATED_CAP = {"기초": 2, "일반": 5, "전문가": 8}
+
+
+def graph_search(query: str, literacy_level: str = "일반") -> dict:
     """
-    쿼리로 시작 노드를 찾고 depth 홉까지 탐색하여 관련 정보를 반환합니다.
+    쿼리로 시작 노드를 찾고 literacy_level에 맞는 홉 수까지 탐색하여 관련 정보를 반환합니다.
 
     Args:
         query: 사용자 검색어 (예: "IRP", "세액공제", "ETF")
-        depth: 탐색 홉 수 (기본 2)
+        literacy_level: 금융이해도 ('기초'=1홉, '일반'=2홉, '전문가'=3홉)
 
     Returns:
         {
@@ -134,6 +138,8 @@ def graph_search(query: str, depth: int = 2) -> dict:
             "macro_related": list[str],       # 관련 거시경제 지표
         }
     """
+    depth = _LITERACY_DEPTH.get(literacy_level, 2)
+    related_cap = _LITERACY_RELATED_CAP.get(literacy_level, 5)
     G = _load_graph()
     if G is None:
         return _empty_result()
@@ -215,8 +221,7 @@ def graph_search(query: str, depth: int = 2) -> dict:
             if name and name not in result["macro_related"]:
                 result["macro_related"].append(name)
 
-    # 관련 용어 최대 5개로 제한
-    result["related_terms"] = result["related_terms"][:5]
+    result["related_terms"] = result["related_terms"][:related_cap]
 
     return result
 
