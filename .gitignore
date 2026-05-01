@@ -4,6 +4,7 @@ data/images/
 data/rag/*.pdf
 .claude/
 .adk/
+**/.adk/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

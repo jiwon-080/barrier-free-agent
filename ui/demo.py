@@ -300,18 +300,23 @@ def analyze_terms() -> str:
         role="user", parts=[genai_types.Part.from_text(text="약관을 분석해주세요.")]
     )
     result_text = ""
-    for event in runner.run(
-        new_message=message,
-        user_id="demo_user",
-        session_id="terms_session",
-        run_config=RunConfig(streaming_mode=StreamingMode.NONE),
-    ):
-        if event.is_final_response() and event.content and event.content.parts:
-            result_text = "".join(p.text for p in event.content.parts if p.text)
+    try:
+        for event in runner.run(
+            new_message=message,
+            user_id="demo_user",
+            session_id="terms_session",
+            run_config=RunConfig(streaming_mode=StreamingMode.NONE),
+        ):
+            if event.content and event.content.parts:
+                text = "".join(p.text for p in event.content.parts if p.text)
+                if text:
+                    result_text = text
+    except Exception as e:
+        return f"(오류 발생: {e})"
     return result_text or "(분석 결과를 가져오지 못했습니다.)"
 
 
-@st.dialog("IRP 상품설명서 — AI 위험 분석")
+@st.dialog("상품설명서 — 주의 조항 자동 표시")
 def show_terms_dialog():
     st.markdown(
         '<div style="font-size:12px;line-height:1.7;margin-bottom:10px;">'
