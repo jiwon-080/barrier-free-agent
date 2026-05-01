@@ -105,15 +105,15 @@ def _format_graph_result(gr: dict, literacy_level: str = "일반") -> str:
         lines.append(f"**앱 화면 안내:** '{route}' 화면에서 확인하실 수 있습니다.\n")
 
     if guardrail:
-        risk_msg = "⚠️ 이 상품은 투자 성향 진단이 필요한 고위험 상품입니다. 투자 전 반드시 성향 진단을 받으세요."
+        risk_msg = "⚠️ 이 상품은 투자 성향 진단이 필요한 고위험 상품입니다. 투자 전 반드시 성향 진단을 받으시기 바랍니다."
     elif literacy_level == "기초":
-        risk_msg = f"'{found_term}'은(는) 잘못하면 원금을 잃을 수 있는 상품입니다. 가입 전 충분히 알아보세요."
+        risk_msg = f"'{found_term}'은(는) 잘못하면 원금을 잃을 수 있는 상품입니다. 가입 전 충분히 알아보시기 바랍니다."
     else:
         risk_msg = (
             f"모든 금융 상품은 수익의 기회와 함께 손실의 위험도 가지고 있습니다. "
             f"시장의 변동이나 예상치 못한 경제 상황에 따라 원금의 일부 또는 전부를 잃을 수 있는 "
             f"'원금 손실 위험(Risk)'이 존재함을 반드시 기억하셔야 합니다. "
-            f"특히 '{found_term}' 관련 투자를 결정하시기 전에는 본인의 투자 성향과 손실 감내 수준을 꼭 확인해 보세요."
+            f"특히 '{found_term}' 관련 투자를 결정하시기 전에는 본인의 투자 성향과 손실 감내 수준을 꼭 확인하시기 바랍니다."
         )
     lines.append(f"**2. 최대 리스크 (위험성):**\n{risk_msg}")
 
@@ -134,13 +134,13 @@ def _legacy_keyword_search(term: str, literacy_level: str = "일반") -> str:
 
         if literacy_level == "기초":
             definition = definition[:150] + ("..." if len(definition) > 150 else "")
-            risk_msg = f"'{found_term}'은(는) 잘못하면 원금을 잃을 수 있는 상품입니다. 가입 전 충분히 알아보세요."
+            risk_msg = f"'{found_term}'은(는) 잘못하면 원금을 잃을 수 있는 상품입니다. 가입 전 충분히 알아보시기 바랍니다."
         else:
             risk_msg = (
                 f"모든 금융 상품은 수익의 기회와 함께 손실의 위험도 가지고 있습니다. "
                 f"시장의 변동이나 예상치 못한 경제 상황에 따라 원금의 일부 또는 전부를 잃을 수 있는 "
                 f"'원금 손실 위험(Risk)'이 존재함을 반드시 기억하셔야 합니다. "
-                f"특히 '{found_term}' 관련 투자를 결정하시기 전에는 본인의 투자 성향과 손실 감내 수준을 꼭 확인해 보세요."
+                f"특히 '{found_term}' 관련 투자를 결정하시기 전에는 본인의 투자 성향과 손실 감내 수준을 꼭 확인하시기 바랍니다."
             )
 
         return (
@@ -153,5 +153,5 @@ def _legacy_keyword_search(term: str, literacy_level: str = "일반") -> str:
 
     return (
         f"죄송합니다. '{term}'에 대한 정보를 사전에서 찾을 수 없습니다. "
-        f"하지만 모든 금융 거래는 수익과 손실의 가능성이 항상 공존한다는 점을 유의해 주세요."
+        f"하지만 모든 금융 거래는 수익과 손실의 가능성이 항상 공존한다는 점을 유의하시기 바랍니다."
     )
