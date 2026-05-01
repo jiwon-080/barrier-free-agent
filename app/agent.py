@@ -52,6 +52,14 @@ financial_advisor_agent = Agent(
     'explain_financial_term' 도구에서 용어를 찾지 못하면 "등록된 사전에 해당 정보가 없습니다."라고만 답하세요.
     다른 도구(시세·지표·상품)에서 데이터를 찾지 못하면 "현재 해당 정보를 조회할 수 없습니다."라고 답하세요.
 
+    [금융이해도별 답변 스타일 — 반드시 준수]
+    사용자 프로필의 금융이해도(literacy_level)에 따라 설명 깊이와 언어 수준을 조절하세요.
+    - '기초': 전문 용어 사용 최소화, 일상적 비유 포함, 2~3문장으로 핵심만 전달.
+      예) ETF → "주식처럼 사고팔 수 있는 펀드입니다. 여러 종목에 나눠 투자해 위험을 줄입니다."
+    - '일반': 표준 금융 용어 허용, 5문장 이내, 간결한 구조 설명.
+    - '전문가': 기술적 세부사항·관련 규정·지표까지 포함, 길이 제한 없음.
+    금융이해도 정보가 없으면 '일반' 수준으로 답변하세요.
+
     [도구 사용 지침]
     1. 금융 용어·개념 질문 → 반드시 'explain_financial_term' 도구를 먼저 호출하고 그 결과만 전달하세요.
     2. 투자 권유·상품 추천 → 'check_investment_guardrail' 도구로 먼저 검증.
@@ -79,16 +87,28 @@ financial_advisor_agent = Agent(
 
 
 # ── 사용자 프로필 도구 ────────────────────────────────────────────────────────
-def set_user_profile(investment_profile: str, tool_context: ToolContext) -> dict:
-    """사용자의 투자성향을 세션에 기록합니다.
-    사용자가 자신의 투자 성향을 직접 언급할 때 호출하세요.
+def set_user_profile(
+    tool_context: ToolContext,
+    investment_profile: str = "",
+    literacy_level: str = "",
+) -> dict:
+    """사용자의 투자성향 또는 금융이해도를 세션에 기록합니다.
+    사용자가 투자 성향이나 금융 지식 수준을 언급할 때 호출하세요.
 
     Args:
         investment_profile: 투자성향 유형 (금융소비자보호법 기준).
-            '위험회피형', '위험중립형', '위험선호형' 중 하나.
+            '위험회피형', '위험중립형', '위험선호형' 중 하나. 변경 없으면 빈 문자열.
+        literacy_level: 금융이해도 수준.
+            '기초', '일반', '전문가' 중 하나. 변경 없으면 빈 문자열.
     """
-    tool_context.state["user:investment_profile"] = investment_profile
-    return {"status": "saved", "recorded": investment_profile}
+    recorded = {}
+    if investment_profile:
+        tool_context.state["user:investment_profile"] = investment_profile
+        recorded["investment_profile"] = investment_profile
+    if literacy_level:
+        tool_context.state["user:literacy_level"] = literacy_level
+        recorded["literacy_level"] = literacy_level
+    return {"status": "saved", "recorded": recorded}
 
 
 # ── 콜백: 도구 호출 후 관심 상품 자동 추적 ───────────────────────────────────
@@ -126,10 +146,13 @@ def _after_tool_callback(tool, args, tool_context: CallbackContext, tool_respons
 def _before_agent_callback(callback_context: CallbackContext):
     interests = list(callback_context.state.get("user:product_interests") or [])
     profile = callback_context.state.get("user:investment_profile") or ""
+    literacy = callback_context.state.get("user:literacy_level") or ""
 
     lines = []
     if profile:
         lines.append(f"- 투자성향: {profile}")
+    if literacy:
+        lines.append(f"- 금융이해도: {literacy}")
     if interests:
         lines.append(f"- 관심 상품: {', '.join(interests)}")
 
@@ -222,9 +245,16 @@ barrier_free_agent = Agent(
     - ISA 비과세 한도는 반드시 "일반형 200만 원 (서민형·농어민형 400만 원)"으로 표기하세요.
 
     [사용자 프로필 기록]
-    사용자가 투자성향을 언급하면 → 즉시 'set_user_profile' 도구로 기록하세요.
+    사용자가 투자성향을 언급하면 → 즉시 'set_user_profile' 도구로 investment_profile을 기록하세요.
     기록 가능 유형(금융소비자보호법 기준): '위험회피형', '위험중립형', '위험선호형'
     예) "안정적으로" → 위험회피형 / "적당히" → 위험중립형 / "공격적으로" → 위험선호형
+
+    [금융이해도 자동 감지 및 기록]
+    사용자의 첫 질문 방식을 보고 금융이해도를 추론하여 'set_user_profile' 도구로 literacy_level을 기록하세요.
+    이미 literacy_level이 기록된 경우(프로필에 금융이해도 항목이 있는 경우) 재설정하지 마세요.
+    - '기초': 기본 용어도 모르는 경우 ("ETF가 뭔가요?", "예금이랑 적금이 뭐가 달라요?")
+    - '일반': 개념은 알지만 세부 내용이 궁금한 경우 ("IRP 세액공제 한도 얼마예요?")
+    - '전문가': 전문 용어 사용·비교 분석 요구 ("DC형 IRP 수익률과 DB형 차이 분석해 주세요")
     """,
     tools=[
         navigate_ui,
