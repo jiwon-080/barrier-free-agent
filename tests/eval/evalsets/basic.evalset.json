@@ -398,6 +398,28 @@
         }
       ],
       "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
+    },
+
+    {
+      "eval_id": "terms_analyze_delegation",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": {
+            "parts": [{"text": "IRP 약관에서 위험한 조항 알려줘."}]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "request_terms_analysis", "args": {}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP 상품설명서에서 주의해야 할 조항을 분석해 드리겠습니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "eval_user", "state": {}}
     }
 
   ]
