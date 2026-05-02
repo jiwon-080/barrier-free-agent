@@ -6,7 +6,7 @@ GraphRAG 검색 엔진
 탐색 우선순위:
   1. 정확 이름 매칭 (term_IRP)
   2. 부분 문자열 매칭
-  3. Gemini text-multilingual-embedding-002 코사인 유사도
+  3. Gemini gemini-embedding-001 코사인 유사도
 """
 
 import os

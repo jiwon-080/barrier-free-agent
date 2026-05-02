@@ -88,6 +88,15 @@ financial_advisor_agent = Agent(
 
 
 # ── 사용자 프로필 도구 ────────────────────────────────────────────────────────
+# -- request_terms_analysis signal tool --
+def request_terms_analysis() -> dict:
+    """IRP 상품설명서 약관 위험 조항 분석을 요청합니다.
+    사용자가 약관, 상품설명서 분석, 위험 조항 확인을 요청할 때 호출하세요.
+    Returns: {"type": "terms_analysis"} -- UI가 약관 분석 화면을 표시합니다.
+    """
+    return {"type": "terms_analysis"}
+
+
 def set_user_profile(
     tool_context: ToolContext,
     investment_profile: str = "",
@@ -190,7 +199,12 @@ barrier_free_agent = Agent(
     - 헤더·항목 제목은 명사형으로 쓰세요. 예) "혜택", "주의사항" (질문형 금지)
     - 맺음 문구("추가로 궁금한 점이 있으시면...")는 꼭 필요할 때만 한 번 사용하세요.
 
-    [도구 위임 규칙]
+    [도구 위임 규칙 — 최우선 확인]
+    ⚠️ 사용자 메시지에 "약관", "분석", "위험 조항", "상품설명서" 중 하나라도 포함되면
+    다른 모든 규칙보다 먼저 'request_terms_analysis' 도구를 호출하세요.
+    이 경우 get_irp_info·get_isa_info를 절대 호출하지 마세요.
+    request_terms_analysis 호출 후 텍스트 응답: "IRP 상품설명서 위험 조항 분석을 시작합니다. 잠시 기다려 주십시오."
+
     아래 요청은 반드시 'financial_advisor_agent' 에이전트에 위임하세요.
     - 금융 용어 설명 (예: "ETF가 뭔가요?", "세액공제 설명해줘")
     - 투자 권유·상품 추천 검증
@@ -241,8 +255,7 @@ barrier_free_agent = Agent(
 
     B. "투자성향진단필요": true이면 아래 문장을 반드시 포함하세요.
        "투자성향 진단을 받지 않으셨다면, 가입 전 먼저 진단을 받으시기를 권장합니다."
-       그리고 [SUGGEST: investment_diagnosis | 투자성향 진단 받기] 마커를 출력하세요.
-       (ui/demo.py가 LLM 응답 텍스트에서 이 마커를 파싱해 화면 이동 버튼으로 렌더링합니다.)
+       (투자성향 진단 버튼은 get_irp_info 도구 응답의 추천다음단계 배열에서 UI가 자동 렌더링합니다. 별도 마커 출력 불필요.)
 
     C. 텍스트 응답 구조: 섹션 제목은 ### 헤더, 섹션 사이에 반드시 빈 줄을 넣으세요.
 
@@ -266,6 +279,7 @@ barrier_free_agent = Agent(
         get_isa_info,
         get_irp_info,
         set_user_profile,
+        request_terms_analysis,
         AgentTool(agent=financial_advisor_agent),
     ],
     before_agent_callback=_before_agent_callback,

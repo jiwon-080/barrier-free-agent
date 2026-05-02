@@ -47,9 +47,9 @@ def navigate_ui(screen_name: str) -> dict:
             "highlight_target": "펀드",
         },
         "투자자성향": {
-            "route": "financial_products/fund/investment_profile",
+            "route": "investment_diagnosis",
             "consent_message": "투자자 성향 진단 화면으로 이동해 드릴까요?",
-            "voice_guide": "펀드 가입 전에 투자자 성향 진단을 먼저 받으셔야 해요. 진단 화면으로 안내해 드릴게요.",
+            "voice_guide": "펀드 가입 전에 투자자 성향 진단을 먼저 받으셔야 합니다. 진단 화면으로 안내해 드릴게요.",
             "highlight_target": "투자자성향진단",
         },
         "ETF": {
