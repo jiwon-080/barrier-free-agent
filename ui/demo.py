@@ -1,4 +1,4 @@
-"""
+﻿"""
 NH 배리어프리 에이전트 — 로컬 데모
 실행: uv run streamlit run ui/demo.py
 """
@@ -276,6 +276,7 @@ def get_user_profile() -> dict:
             return {}
         return {
             "investment_profile": session.state.get("user:investment_profile", ""),
+            "literacy_level":     session.state.get("user:literacy_level", ""),
             "product_interests":  session.state.get("user:product_interests", []),
         }
     except Exception:
@@ -292,9 +293,47 @@ def _get_terms_runner() -> Runner:
     return Runner(agent=terms_analyzer_agent, session_service=svc, app_name="terms_app")
 
 
+def _fallback_highlight(text: str) -> str:
+    """LLM이 mark 태그를 적용하지 않은 경우 Python regex로 하이라이트 적용."""
+    import re, html as _html
+    safe = _html.escape(text)
+    red = [
+        r"원금이 보장되지 않습니다",
+        r"원금 손실이 발생할 수 있",
+        r"예금자보호법 적용 대상이 아닙니다",
+        r"그 책임은 가입자 본인에게 있습니다",
+        r"원금의 일부 또는 전부를 잃을 수 있",
+    ]
+    orange = [
+        r"기타소득세 16\.5%",
+        r"해약수수료",
+        r"중도해지 시",
+        r"세액공제 혜택이 소급 취소",
+        r"추징세액이 발생",
+        r"중도인출은 불가",
+        r"원금의 1\.5%",
+    ]
+    yellow = [
+        r"연금소득세\(3\.3~5\.5%\)",
+        r"연금소득세\(3\.3&#126;5\.5%\)",
+        r"만 55세 이상",
+        r"가입기간 5년 이상",
+        r"연간 납입 한도",
+        r"세액공제 한도",
+    ]
+    for p in red:
+        safe = re.sub(p, lambda m: f'<mark class="hl-red">{m.group()}</mark>', safe)
+    for p in orange:
+        safe = re.sub(p, lambda m: f'<mark class="hl-orange">{m.group()}</mark>', safe)
+    for p in yellow:
+        safe = re.sub(p, lambda m: f'<mark class="hl-yellow">{m.group()}</mark>', safe)
+    return safe
+
+
 @st.cache_data(show_spinner=False)
 def analyze_terms() -> str:
-    """TermsAnalyzerAgent를 실행해 mark 태그가 포함된 약관 HTML을 반환합니다."""
+    """TermsAnalyzerAgent를 실행해 mark 태그가 포함된 약관 HTML을 반환합니다.
+    LLM이 mark 태그를 적용하지 않은 경우 Python 폴백 하이라이터를 사용합니다."""
     runner = _get_terms_runner()
     message = genai_types.Content(
         role="user", parts=[genai_types.Part.from_text(text="약관을 분석해주세요.")]
@@ -313,7 +352,14 @@ def analyze_terms() -> str:
                     result_text = text
     except Exception as e:
         return f"(오류 발생: {e})"
-    return result_text or "(분석 결과를 가져오지 못했습니다.)"
+
+    if not result_text:
+        return "(분석 결과를 가져오지 못했습니다.)"
+
+    # LLM이 mark 태그를 적용하지 않은 경우 폴백 하이라이터 사용
+    if "<mark" not in result_text:
+        return _fallback_highlight(result_text)
+    return result_text
 
 
 @st.dialog("상품설명서 — 주의 조항 자동 표시")
@@ -349,6 +395,7 @@ _TOOL_LABELS: dict[str, str] = {
     "get_etf_prices_by_keyword":  "📈 ETF 시세 조회 중...",
     "get_macro_indicators":       "📊 거시경제 지표 조회 중...",
     "financial_advisor_agent":    "🤝 금융 전문 에이전트 상담 중...",
+    "request_terms_analysis":     "📄 약관 위험 조항 분석 준비 중...",
     "set_user_profile":           "👤 투자성향 기록 중...",
 }
 
@@ -358,6 +405,7 @@ def run_agent(query: str, on_step=None) -> dict:
     result = {
         "text": "", "route": None, "consent": "", "highlight": None,
         "warnings": [], "suggest_actions": [], "nav_steps": [],
+        "show_terms": False,
     }
     try:
         runner = _get_runner()
@@ -395,6 +443,9 @@ def run_agent(query: str, on_step=None) -> dict:
                     if isinstance(info, dict):
                         result["warnings"]        = info.get("경고사항", [])
                         result["suggest_actions"] = info.get("추천다음단계", [])
+
+                elif fc.name == "request_terms_analysis":
+                    result["show_terms"] = True
 
             if event.is_final_response() and event.content and event.content.parts:
                 result["text"] = "".join(
@@ -616,6 +667,8 @@ def agent_popup():
             st.session_state["pending_consent"]   = result["consent"]
             st.session_state["highlight_target"]  = result["highlight"]
             st.session_state["pending_nav_steps"] = result.get("nav_steps", [])
+        if result.get("show_terms"):
+            st.session_state["pending_terms"] = True
         audio = tts_audio_bytes(_strip_markdown_for_tts(result["text"]))
         if audio:
             st.session_state["tts_audio"] = audio
@@ -639,9 +692,15 @@ def agent_popup():
         # 사용자 프로필 칩 (파악된 데이터가 있을 때만)
         profile = get_user_profile()
         inv = profile.get("investment_profile", "")
+        literacy = profile.get("literacy_level", "")
         interests = profile.get("product_interests", [])
-        if inv or interests:
-            chip_parts = ([inv] if inv else []) + interests[:3]
+        if inv or literacy or interests:
+            _LITERACY_LABEL = {"기초": "📗 기초", "일반": "📘 일반", "전문가": "📕 전문가"}
+            chip_parts = (
+                ([_LITERACY_LABEL.get(literacy, literacy)] if literacy else [])
+                + ([inv] if inv else [])
+                + interests[:2]
+            )
             st.markdown(
                 f'<div style="background:{NH_LIGHT_GREEN};border-radius:20px;'
                 f'padding:5px 14px;font-size:12px;color:{NH_GREEN};'
@@ -656,11 +715,13 @@ def agent_popup():
             '이런 걸 물어보세요</div>',
             unsafe_allow_html=True,
         )
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
+        c3, c4 = st.columns(2)
         chips = [
-            ("IRP가 뭔가요?",     c1, "chip_irp"),
-            ("기준금리 알려줘",   c2, "chip_rate"),
-            ("퇴직연금 가입",     c3, "chip_pension"),
+            ("IRP가 뭔가요?",      c1, "chip_irp"),
+            ("기준금리 알려줘",    c2, "chip_rate"),
+            ("퇴직연금 가입",      c3, "chip_pension"),
+            ("IRP 약관 분석해줘",  c4, "chip_terms"),
         ]
         st.markdown('<div class="chip-row">', unsafe_allow_html=True)
         for label, col, key in chips:
@@ -794,7 +855,10 @@ def render_bot_message(msg: dict, msg_idx: int):
     clean = re.sub(r'(?<!\n)\n(?!\n)', '\n\n', clean)
 
     with st.chat_message("assistant", avatar="💬"):
-        st.markdown(clean)
+        if "<mark" in clean:
+            st.markdown(clean, unsafe_allow_html=True)
+        else:
+            st.markdown(clean)
 
     # 경고사항 — 각 항목을 개별 st.markdown() 호출로 분리 (줄바꿈 보장)
     if warnings:
@@ -880,7 +944,7 @@ def screen_home():
     st.caption("NH농협 · 다른금융")
 
     with st.container(border=True):
-        st.markdown("##### NH농협은행 &nbsp; 356-\*\*\*\*-\*\*\*\*")
+        st.markdown("##### NH농협은행 &nbsp; 356-&#42;&#42;&#42;&#42;-&#42;&#42;&#42;&#42;", unsafe_allow_html=True)
         st.button("잔액보기", use_container_width=True, key="home_balance")
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -1299,8 +1363,13 @@ def main():
     init_session()
     st.markdown(NH_CSS + DIALOG_CSS, unsafe_allow_html=True)
 
+    # ── 약관 분석 다이얼로그 오픈 ──
+    if st.session_state.get("pending_terms"):
+        st.session_state["pending_terms"] = False
+        show_terms_dialog()
+
     # ── 화면 이동 후 팝업 재오픈 (에이전트 대화 유지) ──
-    if st.session_state.get("reopen_popup"):
+    elif st.session_state.get("reopen_popup"):
         st.session_state["reopen_popup"] = False
         agent_popup()
 
