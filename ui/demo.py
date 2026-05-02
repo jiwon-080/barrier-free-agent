@@ -1316,7 +1316,6 @@ SCREEN_MAP = {
     "financial_products/isa":   screen_isa,
     # navigate_ui 실제 반환 route 별칭
     "financial_products/retirement_pension":          screen_retirement_pension,
-    "financial_products/fund/investment_profile":     screen_investment_diagnosis,
     "retirement_pension":       screen_retirement_pension,
     "irp_new":                  screen_irp_new,
     "irp_tax_saving":           screen_irp_tax_saving,

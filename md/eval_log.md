@@ -159,6 +159,27 @@ if not _nav_called:
 
 ---
 
+## Run 8 — 2026-05-02 | allenkeem 머지 후 회귀 확인 + terms_analyze_delegation 추가 (19/19 PASS)
+
+**목적**: allenkeem 브랜치 머지(버그픽스 3건·기능추가 4건) 후 기존 케이스 회귀 없음 확인 + terms 약관 분석 트리거 커버리지 추가
+
+**변경 내용**:
+
+1. `tests/eval/evalsets/basic.evalset.json` — 케이스 1개 추가:
+   - `terms_analyze_delegation`: "IRP 약관에서 위험한 조항 알려줘" → `request_terms_analysis` signal tool 호출 확인
+   - (약관 분석은 AgentTool 직접 위임이 아닌 signal tool → UI 다이얼로그 방식으로 구현됨)
+
+**allenkeem 주요 변경 (eval 영향 항목)**:
+- `navigation_tool.py`: 투자성향 route 키 `financial_products/fund/investment_profile` → `investment_diagnosis` 수정
+- `agent.py`: `request_terms_analysis` signal tool 추가 + 약관 요청 시 최우선 호출 instruction
+- `agent.py`: SUGGEST 마커 dead code 제거
+
+**결과**: 19/19 PASS (기존 18 + 신규 1)
+
+**의의**: route 키 수정 후 기존 케이스 회귀 없음 확인. 약관 분석 signal tool 호출이 정상 동작.
+
+---
+
 ## Run 7 — 2026-05-01 | literacy rubric 문장 수 제한 제거 (4/4 PASS)
 
 **목적**: Run 6에서 `literacy_detect_then_apply` inv_2가 rubric 0.0(문장 수 초과)으로 threshold 경계선(0.8)에 걸린 문제 수정
