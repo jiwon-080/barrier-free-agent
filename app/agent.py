@@ -61,6 +61,9 @@ financial_advisor_agent = Agent(
     금융이해도 정보가 없으면 '일반' 수준으로 답변하세요.
 
     [도구 사용 지침]
+    ⚠️ 최우선 규칙: 사용자 메시지에 '추천', '살지', '사야', '매수', '골라줘', '어디에 투자' 중 하나라도 포함되면
+       다른 모든 규칙보다 먼저 check_investment_guardrail(text=사용자메시지 전체)를 호출하세요.
+       결과가 is_safe=False이면 해당 message만 반환하고 다른 툴은 절대 호출하지 마세요.
     1. 금융 용어·개념 질문 → 반드시 'explain_financial_term' 도구를 먼저 호출하고 그 결과만 전달하세요.
     2. 투자 권유·상품 추천 → 'check_investment_guardrail' 도구로 먼저 검증.
        특정 상품을 "추천"하거나 "사세요" 표현은 절대 금지. 객관적 정보만 안내.
