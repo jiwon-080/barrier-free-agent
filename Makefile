@@ -37,16 +37,17 @@ test:
 # ==============================================================================
 
 # Run agent evaluation using ADK eval
-# Usage: make eval [EVALSET=tests/eval/evalsets/basic.evalset.json] [EVAL_CONFIG=tests/eval/eval_config.json]
+# Usage: make eval [EVALSET=navigation|investment|pension_tax] [EVAL_CONFIG=...]
+# Default evalset: navigation
 eval:
 	@echo "==============================================================================="
 	@echo "| Running Agent Evaluation                                                    |"
 	@echo "==============================================================================="
 	uv sync --dev --extra eval
-	uv run adk eval ./app $${EVALSET:-tests/eval/evalsets/basic.evalset.json} \
+	uv run adk eval ./app $${EVALSET:-tests/eval/evalsets/navigation.evalset.json} \
 		$(if $(EVAL_CONFIG),--config_file_path=$(EVAL_CONFIG),$(if $(wildcard tests/eval/eval_config.json),--config_file_path=tests/eval/eval_config.json,))
 
-# Run evaluation with all evalsets
+# Run evaluation with all evalsets (navigation + investment + pension_tax)
 eval-all:
 	@echo "==============================================================================="
 	@echo "| Running All Evalsets                                                        |"
@@ -58,6 +59,11 @@ eval-all:
 	done
 	@echo ""
 	@echo "✅ All evalsets completed"
+
+# Show eval results with tool call history (reads from app/.adk/eval_history/)
+# Usage: make show-eval [FILTER=navigation|investment|pension_tax]
+show-eval:
+	uv run python scripts/show_eval_results.py $${FILTER:-}
 
 # Run code quality checks (codespell, ruff, ty)
 lint:
