@@ -173,6 +173,17 @@ def navigate_ui(screen_name: str) -> dict:
 
     upper = screen_name.upper()
 
+    # 투자성향 진단 (IRP보다 먼저 체크 — "투자성향 진단" 키워드가 IRP 블록으로 넘어가지 않도록)
+    _DIAGNOSIS_KEYWORDS = ["투자성향", "투자자성향", "성향진단", "성향 진단", "위험성향", "투자 성향"]
+    if any(kw in screen_name for kw in _DIAGNOSIS_KEYWORDS):
+        return {
+            "type": "navigation",
+            "route": "investment_diagnosis",
+            "consent_message": "투자성향 진단 화면으로 이동해 드릴까요?",
+            "voice_guide": "투자성향 진단 화면으로 안내해 드릴게요.",
+            "highlight_target": "투자자성향진단",
+        }
+
     # MY퇴직연금 / 내 퇴직연금 (IRP 이전에 체크)
     if "MY퇴직" in upper or "내퇴직" in upper or "내 퇴직" in screen_name:
         return {

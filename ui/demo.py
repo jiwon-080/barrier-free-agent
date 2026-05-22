@@ -266,7 +266,7 @@ def _get_runner() -> Runner:
     return Runner(agent=root_agent, session_service=_get_session_service(), app_name="app")
 
 def get_user_profile() -> dict:
-    """ADK 세션 state에서 사용자 프로필 읽기."""
+    """ADK 세션 state에서 사용자 프로필 읽기 (단일 소스)."""
     try:
         svc = _get_session_service()
         session = svc.get_session_sync(
@@ -283,14 +283,21 @@ def get_user_profile() -> dict:
         return {}
 
 
-@st.cache_resource(show_spinner=False)
-def _get_terms_runner() -> Runner:
-    from app.terms_agent import terms_analyzer_agent  # noqa: PLC0415
-    svc = InMemorySessionService()
-    svc.create_session_sync(
-        app_name="terms_app", user_id="demo_user", session_id="terms_session"
-    )
-    return Runner(agent=terms_analyzer_agent, session_service=svc, app_name="terms_app")
+def _set_profile_direct(investment_profile: str = "", literacy_level: str = "") -> None:
+    """에이전트 호출 없이 ADK 세션 state에 직접 프로필 저장."""
+    try:
+        svc = _get_session_service()
+        session = svc.get_session_sync(
+            app_name="app", user_id="demo_user", session_id="demo_session"
+        )
+        if session is None:
+            return
+        if investment_profile:
+            session.state["user:investment_profile"] = investment_profile
+        if literacy_level:
+            session.state["user:literacy_level"] = literacy_level
+    except Exception:
+        pass
 
 
 def _fallback_highlight(text: str) -> str:
@@ -332,34 +339,14 @@ def _fallback_highlight(text: str) -> str:
 
 @st.cache_data(show_spinner=False)
 def analyze_terms() -> str:
-    """TermsAnalyzerAgent를 실행해 mark 태그가 포함된 약관 HTML을 반환합니다.
-    LLM이 mark 태그를 적용하지 않은 경우 Python 폴백 하이라이터를 사용합니다."""
-    runner = _get_terms_runner()
-    message = genai_types.Content(
-        role="user", parts=[genai_types.Part.from_text(text="약관을 분석해주세요.")]
-    )
-    result_text = ""
+    """약관 원문을 읽고 Python 규칙 기반으로 위험 조항 위치에 하이라이트를 적용합니다.
+    AI 해석 없이 패턴 매칭으로만 동작합니다 (금소법 준수)."""
+    path = Path(__file__).parent.parent / "data" / "tos" / "irp_terms.txt"
     try:
-        for event in runner.run(
-            new_message=message,
-            user_id="demo_user",
-            session_id="terms_session",
-            run_config=RunConfig(streaming_mode=StreamingMode.NONE),
-        ):
-            if event.content and event.content.parts:
-                text = "".join(p.text for p in event.content.parts if p.text)
-                if text:
-                    result_text = text
+        text = path.read_text(encoding="utf-8")
     except Exception as e:
-        return f"(오류 발생: {e})"
-
-    if not result_text:
-        return "(분석 결과를 가져오지 못했습니다.)"
-
-    # LLM이 mark 태그를 적용하지 않은 경우 폴백 하이라이터 사용
-    if "<mark" not in result_text:
-        return _fallback_highlight(result_text)
-    return result_text
+        return f"(약관 파일을 불러오지 못했습니다: {e})"
+    return _fallback_highlight(text)
 
 
 @st.dialog("상품설명서 — 주의 조항 자동 표시")
@@ -373,7 +360,7 @@ def show_terms_dialog():
         '</div>',
         unsafe_allow_html=True,
     )
-    with st.spinner("AI가 약관을 분석하고 있습니다..."):
+    with st.spinner("위험 조항 위치 표시 중..."):
         html = analyze_terms()
     st.markdown(
         f'<div style="font-size:13px;line-height:1.9;white-space:pre-wrap;'
@@ -644,6 +631,13 @@ def section_label(text: str):
 # ── 에이전트 팝업 (바텀시트 다이얼로그) ──────────────────────────────────────
 @st.dialog("배리어프리 도우미")
 def agent_popup():
+    # ── 표시용 프로필 동기화 (dialog 열릴 때마다 ADK state → st.session_state) ──
+    _p = get_user_profile()
+    if _p.get("investment_profile"):
+        st.session_state["_ui_inv"]      = _p["investment_profile"]
+    if _p.get("literacy_level"):
+        st.session_state["_ui_literacy"] = _p["literacy_level"]
+
     # ── 펜딩 쿼리 처리 — 다이얼로그 내부에서 직접 실행 ──
     pending = st.session_state.get("pending_query", "")
     if pending:
@@ -689,11 +683,10 @@ def agent_popup():
             unsafe_allow_html=True,
         )
 
-        # 사용자 프로필 칩 (파악된 데이터가 있을 때만)
-        profile = get_user_profile()
-        inv = profile.get("investment_profile", "")
-        literacy = profile.get("literacy_level", "")
-        interests = profile.get("product_interests", [])
+        # 사용자 프로필 배지 (표시용 캐시 우선, 없으면 ADK state)
+        inv      = st.session_state.get("_ui_inv", "")
+        literacy = st.session_state.get("_ui_literacy", "")
+        interests = get_user_profile().get("product_interests", [])
         if inv or literacy or interests:
             _LITERACY_LABEL = {"기초": "📗 기초", "일반": "📘 일반", "전문가": "📕 전문가"}
             chip_parts = (
@@ -710,6 +703,27 @@ def agent_popup():
                 unsafe_allow_html=True,
             )
 
+        # 금융이해도 미설정 시 선택 칩 표시
+        if not literacy:
+            st.markdown(
+                '<div style="color:#555;font-size:12px;font-weight:600;margin-bottom:6px;">'
+                '금융 이해도를 선택해 주세요</div>',
+                unsafe_allow_html=True,
+            )
+            lc1, lc2, lc3 = st.columns(3)
+            for label, col, key in [
+                ("📗 기초",   lc1, "lit_basic"),
+                ("📘 일반",   lc2, "lit_mid"),
+                ("📕 전문가", lc3, "lit_expert"),
+            ]:
+                with col:
+                    if st.button(label, key=key, use_container_width=True):
+                        level = label.split(" ", 1)[1]
+                        _set_profile_direct(literacy_level=level)
+                        st.session_state["_ui_literacy"] = level  # 즉시 표시 반영
+                        st.rerun()
+            st.markdown('<div style="margin-bottom:10px;"></div>', unsafe_allow_html=True)
+
         st.markdown(
             '<div style="color:#555;font-size:12px;font-weight:600;margin-bottom:6px;">'
             '이런 걸 물어보세요</div>',
@@ -721,7 +735,7 @@ def agent_popup():
             ("IRP가 뭔가요?",      c1, "chip_irp"),
             ("기준금리 알려줘",    c2, "chip_rate"),
             ("퇴직연금 가입",      c3, "chip_pension"),
-            ("IRP 약관 분석해줘",  c4, "chip_terms"),
+            ("내 투자성향 진단해줘", c4, "chip_invest"),
         ]
         st.markdown('<div class="chip-row">', unsafe_allow_html=True)
         for label, col, key in chips:
@@ -1152,8 +1166,32 @@ def screen_portfolio():
         st.metric("최대 낙폭", "-3.1%")
 
 # ── 화면: 투자 성향 진단 ──────────────────────────────────────────────────────
+_Q1_SCORE = {
+    "원금 보전이 최우선": 1, "안정적 수익 추구": 2,
+    "시장 평균 이상 수익": 3, "고위험 고수익 추구": 4,
+}
+_Q2_SCORE = {"1년 미만": 1, "1~3년": 2, "3~5년": 3, "5년 이상": 4}
+_Q3_SCORE = {"원금 손실 불가": 1, "5% 미만": 2, "10~20% 가능": 3, "20% 이상도 감수": 4}
+
+def _score_to_profile(q1: str, q2: str, q3: str) -> str:
+    total = _Q1_SCORE[q1] + _Q2_SCORE[q2] + _Q3_SCORE[q3]
+    if total <= 6:
+        return "위험회피형"
+    elif total <= 9:
+        return "위험중립형"
+    return "위험선호형"
+
 def screen_investment_diagnosis():
     st.warning("⚠️ ETF·펀드 등 고위험 상품 이용 전 투자 성향 진단이 필요합니다.")
+
+    # 이미 진단 완료된 경우 현재 성향 표시
+    current = get_user_profile().get("investment_profile", "")
+    if current:
+        _PROFILE_ICON = {"위험회피형": "🟢", "위험중립형": "🟡", "위험선호형": "🔴"}
+        st.success(
+            f"{_PROFILE_ICON.get(current, '✅')} 현재 투자성향: **{current}**\n\n"
+            "다시 진단하려면 아래 문항을 작성하고 제출하세요."
+        )
 
     with st.form("diagnosis_form"):
         st.markdown("#### Q1. 투자 목적은 무엇인가요?")
@@ -1181,7 +1219,10 @@ def screen_investment_diagnosis():
         )
 
         if st.form_submit_button("진단 완료", use_container_width=True, type="primary"):
-            st.success("✅ 투자 성향 진단이 완료되었습니다. 이제 운용 상품을 조회하실 수 있습니다.")
+            profile = _score_to_profile(q1, q2, q3)
+            _set_profile_direct(investment_profile=profile)
+            st.session_state["_ui_inv"] = profile  # 즉시 표시 반영
+            st.success(f"✅ 투자성향이 **{profile}**으로 저장되었습니다.")
 
 # ── 화면: 연금설계 ────────────────────────────────────────────────────────────
 def screen_pension_design():
