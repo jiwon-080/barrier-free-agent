@@ -370,20 +370,27 @@ def show_terms_dialog():
 
 
 _TOOL_LABELS: dict[str, str] = {
-    "navigate_ui":                "📍 화면 경로 탐색 중...",
-    "get_irp_info":               "📋 IRP 상품 정보 조회 중...",
-    "get_isa_info":               "📋 ISA 상품 정보 조회 중...",
-    "explain_financial_term":     "📚 금융 용어 사전 검색 중...",
-    "check_investment_guardrail": "🛡 투자 적합성 검토 중...",
-    "search_products":            "🔍 예·적금 상품 검색 중...",
-    "get_product_detail":         "🔍 상품 상세 정보 조회 중...",
-    "compare_products":           "⚖️ 상품 비교 중...",
-    "get_etf_price":              "📈 ETF 시세 조회 중...",
-    "get_etf_prices_by_keyword":  "📈 ETF 시세 조회 중...",
-    "get_macro_indicators":       "📊 거시경제 지표 조회 중...",
-    "financial_advisor_agent":    "🤝 금융 전문 에이전트 상담 중...",
-    "request_terms_analysis":     "📄 약관 위험 조항 분석 준비 중...",
-    "set_user_profile":           "👤 투자성향 기록 중...",
+    "navigate_ui":                "📍 화면 경로 탐색 중... 🐕",
+    "get_irp_info":               "📋 IRP 상품 정보 조회 중... 🐕",
+    "get_isa_info":               "📋 ISA 상품 정보 조회 중... 🐕",
+    "explain_financial_term":     "📚 금융 용어 사전 검색 중... 🐱",
+    "check_investment_guardrail": "🛡 투자 적합성 검토 중... 🐱",
+    "search_products":            "🔍 예·적금 상품 검색 중... 🐱",
+    "get_product_detail":         "🔍 상품 상세 정보 조회 중... 🐱",
+    "compare_products":           "⚖️ 상품 비교 중... 🐱",
+    "get_etf_price":              "📈 ETF 시세 조회 중... 🐱",
+    "get_etf_prices_by_keyword":  "📈 ETF 시세 조회 중... 🐱",
+    "get_macro_indicators":       "📊 거시경제 지표 조회 중... 🐱",
+    "investment_agent":           "🐱 나비에게 연결 중...",
+    "pension_tax_agent":          "🐦 까치에게 연결 중...",
+    "simulation_agent":           "🐿️ 토리 계산 중...",
+    "fraud_detection_agent":      "🐯 호야 위험도 판정 중...",
+    "calculate_tax_saving":       "🧮 세액공제 환급액 계산 중... 🐿️",
+    "calculate_maturity_amount":  "🧮 만기 수령액 계산 중... 🐿️",
+    "calculate_pension_payout":   "🧮 연금 수령액 계산 중... 🐿️",
+    "check_fraud_pattern":        "🔍 금융사기 패턴 분석 중... 🐯",
+    "request_terms_analysis":     "📄 약관 위험 조항 분석 준비 중... 🐕",
+    "set_user_profile":           "👤 투자성향 기록 중... 🐕",
 }
 
 
@@ -868,7 +875,7 @@ def render_bot_message(msg: dict, msg_idx: int):
     # 단일 \n → \n\n 으로 정규화 (마크다운은 빈 줄이 있어야 단락 구분됨)
     clean = re.sub(r'(?<!\n)\n(?!\n)', '\n\n', clean)
 
-    with st.chat_message("assistant", avatar="💬"):
+    with st.chat_message("assistant", avatar="🐕"):
         if "<mark" in clean:
             st.markdown(clean, unsafe_allow_html=True)
         else:
@@ -919,7 +926,7 @@ def render_bot_message(msg: dict, msg_idx: int):
 # ── FAB 플로팅 버튼 ───────────────────────────────────────────────────────────
 def render_fab():
     st.markdown('<div class="fab-wrapper">', unsafe_allow_html=True)
-    if st.button("🦖", key="fab_agent", help="배리어프리 도우미"):
+    if st.button("🤗", key="fab_agent", help="배리어프리 도우미"):
         agent_popup()
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -955,10 +962,10 @@ def render_tab_bar():
 # ── 화면: 홈 ─────────────────────────────────────────────────────────────────
 def screen_home():
     st.markdown("**홍길동** 님 &nbsp;›", unsafe_allow_html=True)
-    st.caption("NH농협 · 다른금융")
+    st.caption("OO은행 · 다른금융")
 
     with st.container(border=True):
-        st.markdown("##### NH농협은행 &nbsp; 356-&#42;&#42;&#42;&#42;-&#42;&#42;&#42;&#42;", unsafe_allow_html=True)
+        st.markdown("##### OO은행 &nbsp; 356-&#42;&#42;&#42;&#42;-&#42;&#42;&#42;&#42;", unsafe_allow_html=True)
         st.button("잔액보기", use_container_width=True, key="home_balance")
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -971,7 +978,7 @@ def screen_home():
 
     # 배리어프리 도우미 배너
     if st.button(
-        "🦖 배리어프리 도우미에게 물어보세요",
+        "🤗 배리어프리 도우미에게 물어보세요",
         key="home_agent_banner",
         use_container_width=True,
     ):
