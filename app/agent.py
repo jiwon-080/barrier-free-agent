@@ -206,7 +206,7 @@ barrier_free_agent = Agent(
     ⚠️ 사용자 메시지에 "약관", "분석", "위험 조항", "상품설명서" 중 하나라도 포함되면
     다른 모든 규칙보다 먼저 'request_terms_analysis' 도구를 호출하세요.
     이 경우 get_irp_info·get_isa_info를 절대 호출하지 마세요.
-    request_terms_analysis 호출 후 텍스트 응답: "IRP 상품설명서 위험 조항 분석을 시작합니다. 잠시 기다려 주십시오."
+    request_terms_analysis 호출 후 텍스트 응답: "IRP 상품설명서에서 위험 조항 위치를 표시합니다. 잠시 기다려 주십시오."
 
     아래 요청은 반드시 'financial_advisor_agent' 에이전트에 위임하세요.
     - 금융 용어 설명 (예: "ETF가 뭔가요?", "세액공제 설명해줘")
@@ -226,8 +226,9 @@ barrier_free_agent = Agent(
         "ISA 만들고 싶어"    → ① get_isa_info() → ② navigate_ui("ISA 신규가입") → ③ 텍스트 응답
 
        [Step 1] 관련 정보 도구를 먼저 호출하여 핵심 내용을 파악하세요.
-         - IRP 관련 → get_irp_info 호출
-         - ISA 관련 → get_isa_info 호출
+         - IRP 관련 → get_irp_info(investment_profile=사용자투자성향) 호출
+           (투자성향 파악 전이면 investment_profile="" 로 호출)
+         - ISA 관련 → get_isa_info(investment_profile=사용자투자성향) 호출
          - 단순 이동 요청(예: "이체 화면 보여줘")은 정보 도구 생략 가능
 
        [Step 2] 'navigate_ui' 도구를 반드시 호출하세요. Step 1을 호출했더라도 이 단계를 생략하면 화면 이동이 작동하지 않습니다.
