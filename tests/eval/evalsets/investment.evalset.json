@@ -147,6 +147,35 @@
         }
       ],
       "session_input": {"app_name": "app", "user_id": "inv_user_5", "state": {}}
+    },
+
+    {
+      "eval_id": "savings_maturity_simulation",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "연이율 3.5%짜리 예금에 1000만 원 넣으면 1년 후 얼마 받아요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "simulation_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "1년 만기 기준 이자는 35만 원, 세전 만기 수령액은 1035만 원입니다."}]
+          }
+        },
+        {
+          "invocation_id": "inv_2",
+          "user_content": { "parts": [{"text": "그럼 적금으로 월 50만 원씩 12개월 넣으면요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "simulation_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "총 납입 원금은 600만 원이며, 단리 기준 이자와 만기 수령액을 계산해 드립니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "inv_user_6", "state": {}}
     }
 
   ]

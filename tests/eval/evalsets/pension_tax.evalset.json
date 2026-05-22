@@ -175,6 +175,53 @@
         }
       ],
       "session_input": {"app_name": "app", "user_id": "pt_user_5", "state": {}}
+    },
+
+    {
+      "eval_id": "tax_saving_simulation",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "연봉 5000만 원인데 IRP에 연 300만 원 넣으면 세금 얼마나 돌려받아요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "simulation_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "연봉 5000만 원은 세액공제율 16.5% 구간에 해당합니다. IRP 300만 원 납입 시 환급 예상액은 49만 5천 원입니다."}]
+          }
+        },
+        {
+          "invocation_id": "inv_2",
+          "user_content": { "parts": [{"text": "900만 원 꽉 채우면요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "simulation_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP 연간 한도 900만 원을 납입하시면 세액공제율 16.5% 기준으로 148만 5천 원을 환급받으실 수 있습니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "pt_user_6", "state": {}}
+    },
+
+    {
+      "eval_id": "pension_payout_simulation",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "IRP에 8000만 원 쌓였는데 만 60세부터 10년간 받으면 한 달에 얼마예요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "simulation_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "8000만 원을 10년(120개월) 균등 수령 시 월 수령액은 약 66만 7천 원입니다. 만 60세 수령 시 연금소득세 5.5%가 적용됩니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "pt_user_7", "state": {}}
     }
 
   ]
