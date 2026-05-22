@@ -250,6 +250,45 @@ if not _nav_called:
 
 ---
 
+## Run 10 — 2026-05-22 | evalset 전면 개편 + eval 뷰어 추가 (15/15 PASS)
+
+**목적**: 단일 턴 케이스 제거, 멀티턴 전용 3개 셋으로 재구성 + tool call 시퀀스 가시화
+
+**변경 내용**:
+
+1. **evalset 재구성** — `basic.evalset.json`(33) + `multiturn.evalset.json`(9) 삭제 → 3개 멀티턴 전용 셋으로 교체
+
+   | 파일 | 케이스 수 | 검증 포인트 |
+   |---|---|---|
+   | `navigation.evalset.json` | 5 | 설명→가입 이동, 투자성향 감지→네비, ISA/IRP 비교→선택 |
+   | `investment.evalset.json` | 5 | 가드레일 지속성, 수익보장 거절→객관적 정보, 거시지표→상품→시기 가드레일 |
+   | `pension_tax.evalset.json` | 5 | literacy 기초/전문가, 위험회피형 IRP, ISA→IRP 이전 절세 플래닝 |
+
+2. **eval 뷰어 추가** — `scripts/show_eval_results.py`
+   - `app/.adk/eval_history/` JSON을 파싱해 케이스별 tool call 시퀀스 + 답변 + 루브릭 점수 출력
+   - 실행: `uv run python scripts/show_eval_results.py [evalset_filter]`
+
+3. **Makefile** — `eval` 기본값 `navigation.evalset.json`으로 변경, `show-eval` 타겟 추가
+
+**결과**: 15/15 PASS (navigation 5/5, investment 5/5, pension_tax 5/5)
+
+| evalset | 케이스 수 | 결과 |
+|---|---|---|
+| navigation | 5 | 5/5 PASS (score 1.00) |
+| investment | 5 | 5/5 PASS (score 1.00) |
+| pension_tax | 5 | 5/5 PASS (score 1.00) |
+
+**특이사항**:
+- investment 실행 중 Gemini API 503 다수 발생했으나 ADK 자체 retry로 최종 통과
+- `etf_info_then_buy_guardrail`: 에이전트가 2턴 모두 `financial_advisor_agent`를 거쳐 답변 — outer agent에서 guardrail 직접 호출 대신 sub-agent로 위임하는 패턴 관측 (PASS는 했으나 tool_uses 기대값과 경로 상이)
+- 뷰어 필터 없이 실행 시 삭제된 구 evalset(basic 33 + multiturn 9) 히스토리까지 합산(48/54)됨 → 뷰어 기본값을 `bf_` 필터로 고정하여 현행 3개 셋만 표시하도록 수정
+
+**의의**:
+- 단일 턴 케이스 33개 제거 → 실제 사용 시나리오에 가까운 멀티턴만으로 커버리지 확보
+- eval 뷰어로 PASS/FAIL 원인을 tool call 단위로 추적 가능해짐
+
+---
+
 ## 메트릭 설명
 
 | 메트릭 | 설명 | threshold |
