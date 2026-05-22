@@ -43,7 +43,7 @@ def calculate_tax_saving(
         "ISA_추가_공제액": f"{isa_extra_deductible}만 원",
         "ISA_추가_환급_예상": f"{isa_extra_refund}만 원",
         "총_환급_예상액": f"{total_refund}만 원",
-        "안내": "실제 환급액은 다른 공제 항목 및 세법 개정에 따라 달라질 수 있습니다.",
+        "안내": "실제 환급액은 다른 공제 항목 및 세법 개정에 따라 달라질 수 있습니다. 개인별 세금 신고는 세무사에게 문의하십시오.",
     }
 
 
@@ -110,6 +110,12 @@ def calculate_pension_payout(
     Returns:
         월·연간 수령액 추정 결과 dict
     """
+    if start_age < 55:
+        return {
+            "오류": f"IRP 연금 수령은 만 55세 이후부터 가능합니다. 입력하신 나이(만 {start_age}세)는 수령 조건을 충족하지 않습니다.",
+            "안내": "가입기간 5년 이상 조건도 동시에 충족해야 합니다.",
+        }
+
     if duration_years < 1:
         return {"오류": "수령 기간은 최소 1년 이상이어야 합니다."}
 

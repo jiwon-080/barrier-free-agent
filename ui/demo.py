@@ -962,10 +962,10 @@ def render_tab_bar():
 # ── 화면: 홈 ─────────────────────────────────────────────────────────────────
 def screen_home():
     st.markdown("**홍길동** 님 &nbsp;›", unsafe_allow_html=True)
-    st.caption("NH농협 · 다른금융")
+    st.caption("OO은행 · 다른금융")
 
     with st.container(border=True):
-        st.markdown("##### NH농협은행 &nbsp; 356-&#42;&#42;&#42;&#42;-&#42;&#42;&#42;&#42;", unsafe_allow_html=True)
+        st.markdown("##### OO은행 &nbsp; 356-&#42;&#42;&#42;&#42;-&#42;&#42;&#42;&#42;", unsafe_allow_html=True)
         st.button("잔액보기", use_container_width=True, key="home_balance")
         c1, c2, c3 = st.columns(3)
         with c1:
