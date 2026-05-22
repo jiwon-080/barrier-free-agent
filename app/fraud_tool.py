@@ -88,9 +88,9 @@ def check_fraud_pattern(text: str) -> dict:
     top_risk = max(matched, key=lambda m: priority[m["위험도"]])["위험도"]
 
     if top_risk == "HIGH":
-        verdict = "금융사기 가능성이 매우 높습니다. 즉시 대응이 필요합니다."
+        verdict = "금융사기 가능성이 매우 높습니다. 먼저 해당 기관 공식 번호(홈페이지 기재)로 직접 확인하시고, 의심스러우면 즉시 신고하십시오."
     else:
-        verdict = "금융사기 의심 요소가 있습니다. 주의가 필요합니다."
+        verdict = "금융사기 의심 요소가 있습니다. 해당 기관 공식 번호로 먼저 확인하십시오."
 
     return {
         "위험도": _RISK_KO[top_risk],

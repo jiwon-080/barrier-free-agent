@@ -8,8 +8,10 @@ PRODUCT_PATH = BASE_DIR / "data" / "rag" / "fss_product.json"
 # join_deny 코드 → 사람이 읽을 수 있는 텍스트
 _JOIN_DENY_MAP = {"1": "제한없음", "2": "서민전용", "3": "일부제한"}
 
-# FSS 데이터상 NH농협 공식 명칭
+# 현재 데이터 기준 금융기관 공식 명칭 (내부 데이터 매칭용)
 _NH_COMPANY_NAME = "농협은행주식회사"
+# 사용자 노출용 은행 표시명 (데모에서는 특정 금융기관명 비노출)
+_BANK_DISPLAY_NAME = "OO은행"
 
 # 카테고리 키 매핑
 _CATEGORY_MAP = {
@@ -56,7 +58,7 @@ def search_products(
     product_type: str,
     term_months: Optional[int] = None,
     bank_type: str = "전체",
-    company_filter: str = "NH농협",
+    company_filter: str = "OO은행",
     top_n: int = 5,
 ) -> str:
     """예금 또는 적금 상품을 금리 높은 순으로 조회합니다.
@@ -65,7 +67,7 @@ def search_products(
         product_type:   "예금" 또는 "적금"
         term_months:    조회할 가입 기간(개월). 예) 12 → 12개월 상품만. None이면 전 기간.
         bank_type:      "은행", "저축은행", "전체" 중 하나 (기본값: "전체")
-        company_filter: "NH농협"(기본) 또는 "전체". "전체"이면 타행 상품도 포함하여 비교.
+        company_filter: "OO은행"(기본) 또는 "전체". "전체"이면 타행 상품도 포함하여 비교.
         top_n:          반환할 상품 수 (기본값: 5)
 
     Returns:
@@ -87,7 +89,7 @@ def search_products(
     candidates = []
     for key in keys:
         for prod in _PRODUCTS.get(key, []):
-            if company_filter == "NH농협" and prod["kor_co_nm"] != _NH_COMPANY_NAME:
+            if company_filter == "OO은행" and prod["kor_co_nm"] != _NH_COMPANY_NAME:
                 continue
             rate = _best_rate_for_term(prod.get("options", []), term_months)
             if rate is None:
@@ -103,14 +105,14 @@ def search_products(
 
     if not candidates:
         period_txt = f"{term_months}개월 " if term_months else ""
-        filter_txt = "NH농협" if company_filter == "NH농협" else ""
+        filter_txt = f"{_BANK_DISPLAY_NAME}" if company_filter == "OO은행" else ""
         return f"{filter_txt} {period_txt}{product_type} 상품을 찾을 수 없습니다."
 
     # 금리 내림차순 정렬 후 상위 N개
     top = sorted(candidates, key=lambda x: x["best_rate"], reverse=True)[:top_n]
 
     period_txt  = f"{term_months}개월 " if term_months else ""
-    filter_txt  = "NH농협 " if company_filter == "NH농협" else "전체 은행 "
+    filter_txt  = f"{_BANK_DISPLAY_NAME} " if company_filter == "OO은행" else "전체 은행 "
     header = f"## {filter_txt}{period_txt}{product_type} 금리 TOP {len(top)}\n"
     lines = []
     for i, p in enumerate(top, 1):
@@ -137,7 +139,7 @@ def get_product_detail(product_name: str) -> str:
 
     nh_products = [p for p in all_products if p["kor_co_nm"] == _NH_COMPANY_NAME]
 
-    # NH농협 내에서 정확 일치 → 부분 일치 → 전체에서 부분 일치 순으로 탐색
+    # 주거래 은행 내에서 정확 일치 → 부분 일치 → 전체에서 부분 일치 순으로 탐색
     match = (
         next((p for p in nh_products if p["fin_prdt_nm"] == product_name), None)
         or next((p for p in nh_products if product_name in p["fin_prdt_nm"]), None)
@@ -166,7 +168,7 @@ def get_product_detail(product_name: str) -> str:
 
 
 def get_irp_info(investment_profile: str = "") -> dict:
-    """NH농협 개인형IRP(개인형퇴직연금) 상품 정보를 반환합니다.
+    """개인형IRP(개인형퇴직연금) 상품 정보를 반환합니다.
 
     Args:
         investment_profile: 사용자 투자성향. '위험회피형', '위험중립형', '위험선호형' 중 하나.
@@ -215,6 +217,7 @@ def get_irp_info(investment_profile: str = "") -> dict:
             "원금 손실 위험 있는 투자 상품은 가입 전 반드시 투자성향 진단 필요",
             "만 55세 이상·가입기간 5년 이상 충족해야 연금 수령 가능",
             "중도해지 시 기타소득세(16.5%) 부과 및 세액공제 혜택 전액 반환",
+            "가입 후 30일 이내 청약 철회 가능 (단, 이미 운용이 시작된 경우 제외)",
         ]
         추천다음단계 = [
             {"label": "투자성향 진단 받기", "route": "investment_diagnosis"},
@@ -226,6 +229,7 @@ def get_irp_info(investment_profile: str = "") -> dict:
             "투자 상품 포함 시 원금 손실 발생 가능 — 공격적 운용 시 손실 폭 클 수 있음",
             "만 55세 이상·가입기간 5년 이상 충족해야 연금 수령 가능",
             "중도해지 시 기타소득세(16.5%) 부과 및 세액공제 혜택 전액 반환",
+            "가입 후 30일 이내 청약 철회 가능 (단, 이미 운용이 시작된 경우 제외)",
         ]
         추천다음단계 = [
             {"label": "IRP 신규가입 화면", "route": "irp_new"},
@@ -237,6 +241,7 @@ def get_irp_info(investment_profile: str = "") -> dict:
             "만 55세 이상·가입기간 5년 이상 충족해야 연금 수령 가능",
             "중도해지 시 기타소득세(16.5%) 부과 및 세액공제 혜택 전액 반환",
             "투자 상품 포함 시 원금 손실 발생 가능",
+            "가입 후 30일 이내 청약 철회 가능 (단, 이미 운용이 시작된 경우 제외)",
         ]
         추천다음단계 = [
             {"label": "투자성향 진단 받기", "route": "investment_diagnosis"},
@@ -254,7 +259,7 @@ def get_irp_info(investment_profile: str = "") -> dict:
 
 
 def get_isa_info(isa_type: str = "전체", investment_profile: str = "") -> dict:
-    """NH농협 ISA(개인종합자산관리계좌) 상품 정보를 반환합니다.
+    """ISA(개인종합자산관리계좌) 상품 정보를 반환합니다.
 
     Args:
         isa_type: "신탁형", "일임형", "전체" 중 하나 (기본값: "전체")
@@ -276,7 +281,7 @@ def get_isa_info(isa_type: str = "전체", investment_profile: str = "") -> dict
     if not targets:
         return {"오류": f"'{isa_type}' ISA 상품 정보를 찾을 수 없습니다."}
 
-    lines = ["## NH농협 ISA(개인종합자산관리계좌) 안내\n"]
+    lines = [f"## {_BANK_DISPLAY_NAME} ISA(개인종합자산관리계좌) 안내\n"]
     for p in targets:
         lines.append(f"### {p['fin_prdt_nm']}")
         lines.append(f"**유형**: {p.get('isa_type', '-')}  |  **원금보장**: {'보장' if p.get('principal_protected') else '비보장'}")
@@ -307,7 +312,7 @@ def get_isa_info(isa_type: str = "전체", investment_profile: str = "") -> dict
         경고사항 = [
             "의무가입기간 3년 — 중도 해지 시 세금 혜택 전액 소멸",
             "납입원금 범위 내 부분 인출만 가능하며 인출 후 재납입 불가",
-            "원금 손실 위험이 없는 예·적금 위주 신탁형을 권장합니다",
+            "원금 손실 위험이 없는 예·적금 위주 신탁형도 있습니다",
         ]
         추천다음단계 = [
             {"label": "투자성향 진단 받기", "route": "investment_diagnosis"},
