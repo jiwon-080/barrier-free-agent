@@ -289,6 +289,59 @@ if not _nav_called:
 
 ---
 
+## Run 11 — 2026-05-23 | simulation·fraud 에이전트 추가 + 5개 evalset 확충 (23/23 PASS)
+
+**목적**: simulation_agent(토리 🐿️), fraud_detection_agent(호야 🐯) 신규 추가 후 전체 회귀 확인 + 新 evalset(fraud) 검증
+
+**변경 내용**:
+
+1. **신규 에이전트** (`app/agent.py`):
+   - `simulation_agent` (토리 🐿️): `calculate_tax_saving`, `calculate_maturity_amount`, `calculate_pension_payout` 도구, investment/pension_tax 에이전트 양쪽에서 AgentTool로 호출
+   - `fraud_detection_agent` (호야 🐯): `check_fraud_pattern` 도구, barrier_free_agent에서 AgentTool로 호출
+
+2. **신규 도구** (`app/simulation_tool.py`, `app/fraud_tool.py`):
+   - 세액공제 환급액 계산 (연소득·IRP·ISA 전환분 기준)
+   - 예금/적금 만기금액 계산 (단리)
+   - 연금 수령액 추정 (나이별 연금소득세율 적용)
+   - 보이스피싱·스미싱·투자사기·불법대출 등 7개 패턴 DB 매칭
+
+3. **evalset 확충**:
+   - `investment.evalset.json`: 5 → 6케이스 (`savings_maturity_simulation` 추가)
+   - `pension_tax.evalset.json`: 5 → 7케이스 (`tax_saving_simulation`, `pension_payout_simulation` 추가)
+   - `fraud.evalset.json` 신규 (5케이스): 검찰청 사칭, 택배 스미싱, 불법대출 2턴, 투자사기, 정상 문자 low-risk
+
+4. **금소법 + OO은행 중립화** (`app/product_tool.py`):
+   - `_BANK_DISPLAY_NAME = "OO은행"` 상수 분리
+   - ISA 위험회피형 "권장합니다" → "있습니다" (제21조)
+   - IRP 전 성향: 청약 철회권 30일 안내 추가 (제46조)
+
+5. **뭉치 페르소나 + 위임 규칙 강화** (`app/agent.py`):
+   - barrier_free_agent에 뭉치🐕 페르소나 추가
+   - fraud 위임: `RULE 0` 패턴 + "뭉치는 사기 판단 능력 없음" 명시 → 키워드 매칭 위임 강제
+   - simulation 위임: 나비/까치 양쪽에 "계산 능력 없음" 명시
+
+**결과**: 23/23 PASS
+
+| evalset | 케이스 수 | 결과 |
+|---|---|---|
+| navigation | 5 | 5/5 PASS (score 1.00) |
+| investment | 6 | 6/6 PASS (score 1.00) |
+| pension_tax | 7 | 7/7 PASS (score 1.00) |
+| fraud | 5 | 5/5 PASS (score 1.00) |
+
+**트러블슈팅**:
+- **fraud eval 미통과 (1차)**: fraud evalset이 `--config_file_path` 없이 실행 → 기본 criteria(`tool_trajectory_avg_score` + `response_match_score`) 사용. `fraud_detection_agent` 호출 시 args(`{"request": "..."}`)가 expected(`{}`)와 불일치 → score 0.0. → 올바른 eval config 적용으로 해결 (`rubric_based_final_response_quality_v1` 사용)
+- **fraud 위임 미작동 (2차)**: 뭉치가 사기 질문에 학습 지식으로 직접 답변. `RULE 0` (capability limitation 명시) 추가 후 `fraud_detection_agent` 호출 확인
+- **simulation 위임 미작동**: 나비/까치가 계산 질문에 직접 답변. "계산 능력 없음" 명시 후 `simulation_agent` 호출 확인
+- **503 과부하**: 다수 retry 발생했으나 ADK retry logic으로 전 케이스 통과
+
+**의의**:
+- 5-agent 멀티에이전트 구조(뭉치-나비-까치-토리-호야) 완성 후 23/23 PASS 확인
+- fraud evalset은 `rubric_based_final_response_quality_v1` 기준으로 통과 (tool_trajectory가 아닌 응답 품질 측정)
+- eval-all이 `tests/eval/evalsets/*.evalset.json` 패턴으로 fraud 포함 4개 셋 자동 실행
+
+---
+
 ## 메트릭 설명
 
 | 메트릭 | 설명 | threshold |
