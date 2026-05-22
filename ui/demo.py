@@ -383,6 +383,12 @@ _TOOL_LABELS: dict[str, str] = {
     "get_macro_indicators":       "📊 거시경제 지표 조회 중... 🐱",
     "investment_agent":           "🐱 나비에게 연결 중...",
     "pension_tax_agent":          "🐦 까치에게 연결 중...",
+    "simulation_agent":           "🐿️ 토리 계산 중...",
+    "fraud_detection_agent":      "🐯 호야 위험도 판정 중...",
+    "calculate_tax_saving":       "🧮 세액공제 환급액 계산 중... 🐿️",
+    "calculate_maturity_amount":  "🧮 만기 수령액 계산 중... 🐿️",
+    "calculate_pension_payout":   "🧮 연금 수령액 계산 중... 🐿️",
+    "check_fraud_pattern":        "🔍 금융사기 패턴 분석 중... 🐯",
     "request_terms_analysis":     "📄 약관 위험 조항 분석 준비 중... 🐕",
     "set_user_profile":           "👤 투자성향 기록 중... 🐕",
 }

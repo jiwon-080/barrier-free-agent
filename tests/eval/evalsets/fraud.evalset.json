@@ -1,0 +1,109 @@
+{
+  "eval_set_id": "bf_fraud_eval",
+  "name": "BF Agent — 금융사기 탐지 (호야)",
+  "description": "보이스피싱·스미싱·투자사기 상황에서 fraud_detection_agent(호야)가 위험도를 정확히 판정하고 신고 방법을 안내하는지 검증합니다.",
+  "eval_cases": [
+
+    {
+      "eval_id": "voice_phishing_prosecutor",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "검찰청에서 전화가 왔는데 제 명의가 도용됐다고 계좌를 동결해야 한다고 해요. 사기인가요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "위험도가 높습니다. 검찰청·경찰청은 전화로 계좌 동결을 요구하지 않습니다. 즉시 전화를 끊고 금융감독원 1332 또는 경찰청 112에 신고하십시오."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_1", "state": {}}
+    },
+
+    {
+      "eval_id": "smishing_parcel",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "택배 미수령 문자가 왔는데 링크를 클릭하라고 해요."}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "스미싱 문자일 가능성이 높습니다. 링크를 클릭하지 마십시오. 한국인터넷진흥원 118에 문자를 신고하실 수 있습니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_2", "state": {}}
+    },
+
+    {
+      "eval_id": "illegal_loan_ad",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "신용불량자도 당일 입금 가능하다는 대출 광고 문자가 왔어요. 믿어도 되나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "불법 대출 광고 의심 사례입니다. 수수료 또는 선이자를 요구하면 사기입니다. 금융감독원 1332로 신고하실 수 있습니다."}]
+          }
+        },
+        {
+          "invocation_id": "inv_2",
+          "user_content": { "parts": [{"text": "수수료 먼저 내면 대출해준다고 하는데요."}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "선수수료 요구는 대출 사기의 전형적인 수법입니다. 절대 입금하지 마시고 금융감독원 1332에 즉시 신고하십시오."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_3", "state": {}}
+    },
+
+    {
+      "eval_id": "investment_scam_guaranteed",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "리딩방에서 원금 보장에 월 10% 수익 보장된다고 하는데 어떻게 생각해요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "투자 사기 가능성이 매우 높습니다. 원금 보장과 고수익을 동시에 약속하는 것은 불법입니다. 금융감독원 1332에 신고하십시오."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_4", "state": {}}
+    },
+
+    {
+      "eval_id": "low_risk_normal_inquiry",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "은행에서 정기예금 만기 안내 문자가 왔어요. 사기인가요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "입력하신 내용에서 금융사기 패턴이 감지되지 않았습니다. 의심스러우시면 직접 은행 공식 번호로 확인하시거나 금융감독원 1332에 문의하십시오."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_5", "state": {}}
+    }
+
+  ]
+}
