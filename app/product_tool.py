@@ -165,8 +165,12 @@ def get_product_detail(product_name: str) -> str:
     )
 
 
-def get_irp_info() -> dict:
+def get_irp_info(investment_profile: str = "") -> dict:
     """NH농협 개인형IRP(개인형퇴직연금) 상품 정보를 반환합니다.
+
+    Args:
+        investment_profile: 사용자 투자성향. '위험회피형', '위험중립형', '위험선호형' 중 하나.
+                            빈 문자열이면 일반 안내를 반환합니다.
 
     Returns:
         dict: 상품정보, 주요혜택, 경고사항, 투자성향진단필요, 추천다음단계 포함
@@ -177,7 +181,16 @@ def get_irp_info() -> dict:
 
     p = irp_products[0]
     risk_profiles = p.get("investment_risk_profile", {})
-    risk_lines = "\n".join(f"  - {k}: {v}" for k, v in risk_profiles.items())
+
+    # 성향이 파악된 경우 해당 운용방법만 강조, 없으면 전체 표시
+    if investment_profile and investment_profile in risk_profiles:
+        risk_highlight = f"  - **{investment_profile}**: {risk_profiles[investment_profile]}"
+        others = "\n".join(
+            f"  - {k}: {v}" for k, v in risk_profiles.items() if k != investment_profile
+        )
+        risk_lines = risk_highlight + ("\n" + others if others else "")
+    else:
+        risk_lines = "\n".join(f"  - {k}: {v}" for k, v in risk_profiles.items())
 
     상품정보 = (
         f"## {p['fin_prdt_nm']} ({p['kor_co_nm']})\n\n"
@@ -196,27 +209,57 @@ def get_irp_info() -> dict:
         f"**유의사항**: {p.get('etc_note', '-')}"
     )
 
-    return {
-        "상품정보": 상품정보,
-        "주요혜택": f"연 {p['annual_limit_savings'] // 10000}백만 원까지 세액공제, 연금 수령 시 퇴직소득세 절감",
-        "경고사항": [
+    # 성향별 경고사항 / 추천다음단계 분기
+    if investment_profile == "위험회피형":
+        경고사항 = [
+            "원금 손실 위험 있는 투자 상품은 가입 전 반드시 투자성향 진단 필요",
+            "만 55세 이상·가입기간 5년 이상 충족해야 연금 수령 가능",
+            "중도해지 시 기타소득세(16.5%) 부과 및 세액공제 혜택 전액 반환",
+        ]
+        추천다음단계 = [
+            {"label": "투자성향 진단 받기", "route": "investment_diagnosis"},
+            {"label": "IRP 신규가입 화면", "route": "irp_new"},
+        ]
+        진단필요 = True
+    elif investment_profile == "위험선호형":
+        경고사항 = [
+            "투자 상품 포함 시 원금 손실 발생 가능 — 공격적 운용 시 손실 폭 클 수 있음",
+            "만 55세 이상·가입기간 5년 이상 충족해야 연금 수령 가능",
+            "중도해지 시 기타소득세(16.5%) 부과 및 세액공제 혜택 전액 반환",
+        ]
+        추천다음단계 = [
+            {"label": "IRP 신규가입 화면", "route": "irp_new"},
+            {"label": "포트폴리오 현황", "route": "portfolio"},
+        ]
+        진단필요 = False
+    else:  # 위험중립형 or 미파악
+        경고사항 = [
             "만 55세 이상·가입기간 5년 이상 충족해야 연금 수령 가능",
             "중도해지 시 기타소득세(16.5%) 부과 및 세액공제 혜택 전액 반환",
             "투자 상품 포함 시 원금 손실 발생 가능",
-        ],
-        "투자성향진단필요": True,
-        "추천다음단계": [
+        ]
+        추천다음단계 = [
             {"label": "투자성향 진단 받기", "route": "investment_diagnosis"},
             {"label": "IRP 신규가입 화면", "route": "irp_new"},
-        ],
+        ]
+        진단필요 = True
+
+    return {
+        "상품정보": 상품정보,
+        "주요혜택": f"연 {p['annual_limit_savings'] // 10000}백만 원까지 세액공제, 연금 수령 시 퇴직소득세 절감",
+        "경고사항": 경고사항,
+        "투자성향진단필요": 진단필요,
+        "추천다음단계": 추천다음단계,
     }
 
 
-def get_isa_info(isa_type: str = "전체") -> dict:
+def get_isa_info(isa_type: str = "전체", investment_profile: str = "") -> dict:
     """NH농협 ISA(개인종합자산관리계좌) 상품 정보를 반환합니다.
 
     Args:
         isa_type: "신탁형", "일임형", "전체" 중 하나 (기본값: "전체")
+        investment_profile: 사용자 투자성향. '위험회피형', '위험중립형', '위험선호형' 중 하나.
+                            빈 문자열이면 일반 안내를 반환합니다.
 
     Returns:
         dict: 상품정보, 주요혜택, 경고사항, 투자성향진단필요, 추천다음단계 포함
@@ -259,19 +302,47 @@ def get_isa_info(isa_type: str = "전체") -> dict:
         for p in targets
     )
 
-    return {
-        "상품정보": "\n".join(lines),
-        "주요혜택": "일반형 기준 이익금 200만 원까지 비과세 (서민형·농어민형은 400만 원). 비과세 한도 초과분은 9.9% 분리과세.",
-        "경고사항": [
+    # 성향별 경고사항 / 추천다음단계 분기
+    if investment_profile == "위험회피형":
+        경고사항 = [
+            "의무가입기간 3년 — 중도 해지 시 세금 혜택 전액 소멸",
+            "납입원금 범위 내 부분 인출만 가능하며 인출 후 재납입 불가",
+            "원금 손실 위험이 없는 예·적금 위주 신탁형을 권장합니다",
+        ]
+        추천다음단계 = [
+            {"label": "투자성향 진단 받기", "route": "investment_diagnosis"},
+            {"label": "ISA 신탁형 가입", "route": "financial_products/isa"},
+        ]
+        진단필요 = has_investment
+    elif investment_profile == "위험선호형":
+        경고사항 = [
+            "의무가입기간 3년 — 중도 해지 시 세금 혜택 전액 소멸",
+            "납입원금 범위 내 부분 인출만 가능하며 인출 후 재납입 불가",
+            "일임형 선택 시 펀드·ETF 포함으로 원금 손실 발생 가능",
+        ]
+        추천다음단계 = [
+            {"label": "ISA 일임형 가입", "route": "financial_products/isa"},
+            {"label": "투자성향 진단 받기", "route": "investment_diagnosis"},
+        ]
+        진단필요 = has_investment
+    else:  # 위험중립형 or 미파악
+        경고사항 = [
             "의무가입기간 3년 — 중도 해지 시 세금 혜택 전액 소멸",
             "납입원금 범위 내 부분 인출만 가능하며 인출 후 재납입 불가 (입출금 자유 아님)",
             "신탁형 선택 시 투자 상품 포함으로 원금 손실 발생 가능",
-        ],
-        "투자성향진단필요": has_investment,
-        "추천다음단계": [
+        ]
+        추천다음단계 = [
             {"label": "투자성향 진단 먼저 받기", "route": "investment_diagnosis"},
             {"label": "ISA 가입 화면으로 이동", "route": "financial_products/isa"},
-        ],
+        ]
+        진단필요 = has_investment
+
+    return {
+        "상품정보": "\n".join(lines),
+        "주요혜택": "일반형 기준 이익금 200만 원까지 비과세 (서민형·농어민형은 400만 원). 비과세 한도 초과분은 9.9% 분리과세.",
+        "경고사항": 경고사항,
+        "투자성향진단필요": 진단필요,
+        "추천다음단계": 추천다음단계,
     }
 
 
