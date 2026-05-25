@@ -1,15 +1,32 @@
 # 보완 사항 TODO
 
-## 1. RAG → Wiki RAG + Hermes 메모리 구조로 전환
+## 1. RAG → LLM Wiki + Hermes 메모리 구조로 전환
 
-### 1-1. Wiki RAG (지식 메모리)
-- [ ] `data/wiki/` 디렉터리에 금융 지식 마크다운 작성
-  - IRP.md, ISA.md, ETF.md, 세액공제.md, 퇴직연금.md, 기준금리.md 등 10~15개
-  - 위키링크(`[[ISA]]`, `[[세액공제]]`)로 관계 명시 — 인과관계를 사람이 직접 정의
-- [ ] `explain_financial_term` 백엔드를 Wiki RAG로 교체
-  - Gemini embedding + cosine similarity로 관련 md 검색
-  - 검색된 md를 컨텍스트로 주입 (GraphRAG pkl 제거)
-- [ ] `scripts/build_graph.py`, `data/rag/*.pkl` 제거 (GraphRAG 레거시 정리)
+### 1-1. LLM Wiki 지식베이스 (Karpathy 패턴) ✅ 폴더 구조 완료 (2026-05-24)
+- [x] `data/rag/` 레거시 전체 삭제 (GraphRAG pkl, JSON 사전, 스크랩 스냅샷)
+- [x] 새 폴더 구조 생성
+  ```
+  data/
+    source/documents/   ← 원본 PDF
+    source/scripts/     ← 스크랩 스크립트
+    knowledge/          ← Karpathy LLM Wiki (Obsidian 마크다운)
+      schema.md         ← 네이밍·작성 규칙
+      index.md          ← 전체 페이지 목록
+      investment/       ← 나비 도메인
+      pension_tax/      ← 까치 도메인
+      fraud/            ← 호야 도메인
+      glossary/         ← 공용 금융 용어
+      wiki_admin/       ← 위키 건강 관리 (lint, log, skills)
+  ```
+- [ ] `data/knowledge/` 각 도메인 마크다운 페이지 작성
+  - investment: ETF.md, 예금.md, 적금.md, 펀드.md, 주식.md 등
+  - pension_tax: IRP.md, ISA.md, 세액공제.md, 퇴직연금.md 등
+  - fraud: 기관사칭형.md, 대출빙자형.md, 메신저피싱.md, 스미싱.md, 투자빙자형.md 등 (FSS 분류 기준)
+  - glossary: 금융 용어 10~15개
+- [ ] `explain_financial_term` 백엔드 교체
+  - 기존: JSON 사전 exact match → 신규: `knowledge/glossary/*.md` + `knowledge/investment/*.md` context 주입
+  - 임베딩·벡터 DB 없음 — LLM이 로드된 md 컨텍스트 기반으로 직접 답변
+- [ ] `app/graph_rag_tool.py` 등 RAG 관련 app 코드 정리
 
 ### 1-2. Hermes 스타일 메모리 구조
 - [ ] `memory/agents/` — 에이전트별 스킬 문서
