@@ -1,7 +1,7 @@
 {
   "eval_set_id": "bf_investment_eval",
   "name": "BF Agent — 투자 정보 & 가드레일",
-  "description": "투자 추천 가드레일 일관성, 투자성향 기반 상품 안내, 거시지표 조회 → 상품 탐색 플로우를 멀티턴으로 검증합니다.",
+  "description": "투자 추천 가드레일, 거시지표 조회, wiki 기반 개념 설명, 시뮬레이션 위임 플로우를 검증합니다.",
   "eval_cases": [
 
     {
@@ -63,42 +63,13 @@
     },
 
     {
-      "eval_id": "profile_aggressive_isa_guardrail",
-      "conversation": [
-        {
-          "invocation_id": "inv_1",
-          "user_content": { "parts": [{"text": "ISA 계좌 알려주세요."}] },
-          "intermediate_data": {
-            "tool_uses": [{"name": "get_isa_info", "args": {"investment_profile": "위험선호형"}}]
-          },
-          "final_response": {
-            "role": "model",
-            "parts": [{"text": "고객님의 투자성향(위험선호형)에 맞게 안내해 드리겠습니다. ISA 일임형은 전문가가 고객 성향에 따라 포트폴리오를 운용하는 방식으로, 적극적인 수익 추구를 원하시는 분께 적합합니다."}]
-          }
-        },
-        {
-          "invocation_id": "inv_2",
-          "user_content": { "parts": [{"text": "일임형과 신탁형 중 어떤 게 나을까요?"}] },
-          "intermediate_data": {
-            "tool_uses": [{"name": "check_investment_guardrail", "args": {}}]
-          },
-          "final_response": {
-            "role": "model",
-            "parts": [{"text": "특정 상품을 추천해 드리기는 어렵습니다. 일임형은 전문가 운용, 신탁형은 고객 직접 운용 방식입니다. 고객님의 성향과 선호에 따라 선택하시기 바랍니다."}]
-          }
-        }
-      ],
-      "session_input": {"app_name": "app", "user_id": "inv_user_3", "state": {"user:investment_profile": "위험선호형"}}
-    },
-
-    {
       "eval_id": "macro_rate_then_product_query",
       "conversation": [
         {
           "invocation_id": "inv_1",
           "user_content": { "parts": [{"text": "요즘 기준금리가 얼마예요?"}] },
           "intermediate_data": {
-            "tool_uses": [{"name": "get_macro_indicators", "args": {"indicators": ["기준금리"]}}]
+            "tool_uses": [{"name": "get_macro_indicators", "args": {}}]
           },
           "final_response": {
             "role": "model",
@@ -117,7 +88,7 @@
           }
         }
       ],
-      "session_input": {"app_name": "app", "user_id": "inv_user_4", "state": {}}
+      "session_input": {"app_name": "app", "user_id": "inv_user_3", "state": {}}
     },
 
     {
@@ -127,7 +98,7 @@
           "invocation_id": "inv_1",
           "user_content": { "parts": [{"text": "KODEX 200 ETF에 대해 알려주세요."}] },
           "intermediate_data": {
-            "tool_uses": [{"name": "financial_advisor_agent", "args": {}}]
+            "tool_uses": [{"name": "investment_agent", "args": {}}]
           },
           "final_response": {
             "role": "model",
@@ -146,7 +117,7 @@
           }
         }
       ],
-      "session_input": {"app_name": "app", "user_id": "inv_user_5", "state": {}}
+      "session_input": {"app_name": "app", "user_id": "inv_user_4", "state": {}}
     },
 
     {
@@ -175,7 +146,79 @@
           }
         }
       ],
+      "session_input": {"app_name": "app", "user_id": "inv_user_5", "state": {}}
+    },
+
+    {
+      "eval_id": "wiki_etf_concept",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "ETF가 뭔가요? 펀드랑 다른 건가요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "investment_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "ETF는 주식처럼 거래소에서 실시간으로 사고팔 수 있는 펀드입니다. 일반 펀드는 하루 한 번 기준가로 거래되지만, ETF는 주식처럼 실시간 매매가 가능합니다."}]
+          }
+        }
+      ],
       "session_input": {"app_name": "app", "user_id": "inv_user_6", "state": {}}
+    },
+
+    {
+      "eval_id": "wiki_bond_rate_relation",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "채권은 금리가 오르면 가격이 왜 내려가요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "investment_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "금리가 오르면 기존 채권의 낮은 이자가 상대적으로 매력을 잃어 가격이 하락합니다. 금리와 채권 가격은 반대 방향으로 움직입니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "inv_user_7", "state": {}}
+    },
+
+    {
+      "eval_id": "wiki_investment_profile_neutral",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "저는 위험중립형이라는데 어떤 상품이 맞나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "investment_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "위험중립형은 적정 수준의 위험을 감수하고 시장 평균 수익을 추구하는 성향입니다. 혼합형 펀드나 채권혼합형 ETF가 적합합니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "inv_user_8", "state": {}}
+    },
+
+    {
+      "eval_id": "wiki_compound_interest",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "단리랑 복리가 뭐가 달라요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "investment_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "단리는 원금에만 이자가 붙고, 복리는 이자에도 다시 이자가 붙습니다. 장기 투자일수록 복리 효과가 크게 차이납니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "inv_user_9", "state": {}}
     }
 
   ]
