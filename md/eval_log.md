@@ -342,6 +342,58 @@ if not _nav_called:
 
 ---
 
+## Run 12 — 2026-05-26 | LLM Wiki 전환 + evalset 23→34케이스 확충 (34/34 PASS)
+
+**목적**: GraphRAG → Karpathy LLM Wiki 전환 후 전체 회귀 확인 + 新 wiki 기반 케이스 11개 검증
+
+**변경 내용**:
+
+1. **LLM Wiki 지식베이스 완성** (`data/knowledge/`):
+   - `investment/`: 투자성향.md, 예금적금비교.md, ETF투자가이드.md, 펀드.md, 채권.md (5개 신규)
+   - `pension_tax/`: ISA.md, 세액공제.md (2개 신규, IRP.md·퇴직연금.md는 이전 세션)
+   - `glossary/`: ETF.md, 인플레이션.md, 단리복리.md, 기준금리.md, 예금.md (5개 신규)
+
+2. **agent.py wiki 주입** (`app/agent.py`):
+   - `investment_agent` instruction: `{_investment_wiki}` + `{_glossary_wiki}` f-string 주입
+   - `pension_tax_agent` instruction: `{_pension_tax_wiki}` + `{_glossary_wiki}` f-string 주입
+   - wiki 내 개념 → 도구 호출 없이 직접 답변, 계산·실시간 데이터 → 도구 호출
+
+3. **`explain_financial_term` 백엔드 교체** (`app/literacy_tool.py`):
+   - 416줄 GraphRAG BFS → 36줄 파일명·프론트매터 검색으로 교체
+   - 단방향 매칭(`term_lower in stem` only) — 역방향 제거로 false positive(휴면예금→예금.md) 방지
+
+4. **`app/graph_rag_tool.py` 삭제** — GraphRAG BFS·Gemini 임베딩·pkl 로더 전부 제거
+
+5. **evalset 확충** (23케이스 → 34케이스):
+
+   | evalset | 이전 | 이후 | 신규 케이스 |
+   |---|---|---|---|
+   | navigation | 5 | 7 | `terms_analysis_request`, `transfer_screen_navigate` |
+   | investment | 6 | 9 | `wiki_etf_concept`, `wiki_bond_rate_relation`, `wiki_investment_profile_neutral`, `wiki_compound_interest` |
+   | fraud | 5 | 8 | `messenger_family_phishing`, `kidnap_ransom_threat`, `fraud_after_transfer` |
+   | pension_tax | 7 | 10 | `wiki_db_dc_diff`, `wiki_isa_tax_benefit`, `wiki_irp_tax_deduction_rate` |
+
+**결과**: 34/34 PASS
+
+| evalset | 케이스 수 | 결과 |
+|---|---|---|
+| navigation | 7 | 7/7 PASS (score 1.00) |
+| investment | 9 | 9/9 PASS (score 1.00) |
+| fraud | 8 | 8/8 PASS (score 1.00) |
+| pension_tax | 10 | 10/10 PASS (score 1.00) |
+
+**트러블슈팅**:
+- **`wiki_bond_rate_relation` status 3**: 1차 실행 시 judge LLM 호출 실패로 score=None, eval_status=3(EVAL_ERROR) 발생. 내용 실패가 아닌 API 일시 오류. 재실행 후 PASS 확인.
+- **false positive `_find_page`**: 초기 구현에서 `stem in term_lower` 방향 포함 → "휴면예금" 검색 시 `예금.md` 오매칭. 단방향(`term_lower in stem` only)으로 수정 후 해결.
+- **evalset `financial_advisor_agent` 잔재**: navigation/investment/pension_tax evalset에 구 에이전트명 잔재. 전체 4개 파일 일괄 수정.
+
+**의의**:
+- GraphRAG(임베딩·pkl) 완전 제거 → 순수 context stuffing으로 전환 완료
+- wiki 기반 개념 질문 11케이스 신규 추가 — 도구 호출 없이 wiki context만으로 PASS
+- `explain_financial_term` 코드 91% 감소(416→36줄), 의존성(Gemini embedding, networkx) 완전 제거
+
+---
+
 ## 메트릭 설명
 
 | 메트릭 | 설명 | threshold |
