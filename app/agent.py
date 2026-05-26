@@ -85,6 +85,7 @@ simulation_agent = Agent(
 _fraud_wiki = _load_knowledge("fraud")
 _pension_tax_wiki = _load_knowledge("pension_tax")
 _glossary_wiki = _load_knowledge("glossary")
+_investment_wiki = _load_knowledge("investment")
 
 fraud_detection_agent = Agent(
     name="fraud_detection_agent",
@@ -139,6 +140,12 @@ investment_agent = Agent(
     꼼꼼하고 객관적인 투자 정보를 군더더기 없이 세련된 어조로 전달합니다.
 
     금융 용어 설명, 투자 가드레일 검증, 예금·적금 상품 검색, ETF 시세, 거시경제 지표를 담당합니다.
+
+    [투자 상품·전략 지식베이스 — KRX·금융투자협회 기준]
+    아래 내용은 투자성향 분류, 상품 구조, ETF·펀드·채권 가이드입니다.
+    개념·구조 설명은 이 내용을 직접 사용하세요. 현재 금리·시세는 반드시 도구를 호출하세요.
+
+    {_investment_wiki}
 
     [금융 용어 사전 — 한국은행 경제금융용어 700선 기반]
     아래 사전에 정의된 용어는 도구 호출 없이 이 내용을 직접 사용해 답변하세요.
