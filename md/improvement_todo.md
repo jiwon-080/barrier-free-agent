@@ -18,15 +18,15 @@
       glossary/         ← 공용 금융 용어
       wiki_admin/       ← 위키 건강 관리 (lint, log, skills)
   ```
-- [ ] `data/knowledge/` 각 도메인 마크다운 페이지 작성
-  - investment: ETF.md, 예금.md, 적금.md, 펀드.md, 주식.md 등
-  - pension_tax: IRP.md, ISA.md, 세액공제.md, 퇴직연금.md 등
-  - fraud: 기관사칭형.md, 대출빙자형.md, 메신저피싱.md, 스미싱.md, 투자빙자형.md 등 (FSS 분류 기준)
-  - glossary: 금융 용어 10~15개
-- [ ] `explain_financial_term` 백엔드 교체
-  - 기존: JSON 사전 exact match → 신규: `knowledge/glossary/*.md` + `knowledge/investment/*.md` context 주입
-  - 임베딩·벡터 DB 없음 — LLM이 로드된 md 컨텍스트 기반으로 직접 답변
-- [ ] `app/graph_rag_tool.py` 등 RAG 관련 app 코드 정리
+- [x] `data/knowledge/` 각 도메인 마크다운 페이지 작성 ✅ 완료 (2026-05-26)
+  - investment: 투자성향.md, 예금적금비교.md, ETF투자가이드.md, 펀드.md, 채권.md
+  - pension_tax: IRP.md, ISA.md, 세액공제.md, 퇴직연금.md
+  - fraud: 기관사칭형.md, 대출빙자형.md, 메신저피싱.md, 스미싱.md, 투자빙자형.md, 납치협박형.md, 피해시대처.md
+  - glossary: ETF.md, 인플레이션.md, 단리복리.md, 기준금리.md, 예금.md
+- [x] `explain_financial_term` 백엔드 교체 ✅ 완료 (2026-05-26)
+  - 기존: GraphRAG BFS(416줄) → 신규: 파일명·프론트매터 검색(36줄)
+  - 임베딩·벡터 DB 없음 — wiki md 파일 직접 검색 후 LLM context에 주입
+- [x] `app/graph_rag_tool.py` 등 RAG 관련 app 코드 정리 ✅ 완료 (2026-05-26)
 
 ### 1-2. Hermes 스타일 메모리 구조
 - [ ] `memory/agents/` — 에이전트별 스킬 문서
@@ -76,7 +76,7 @@
 ## 5. 답변 퀄리티 개선
 - [ ] 고객 상황 반영 없이 동일 답변 나오는 케이스 식별 및 수정
 - [ ] 멀티턴 문맥 활용도 향상 (이전 대화 참조 강화)
-- [ ] evalset 추가 (현재 42케이스 — 목표 60+)
+- [ ] evalset 추가 (현재 34케이스 — 목표 60+)
 
 ---
 
