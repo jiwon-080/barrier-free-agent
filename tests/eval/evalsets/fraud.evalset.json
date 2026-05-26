@@ -1,7 +1,7 @@
 {
   "eval_set_id": "bf_fraud_eval",
   "name": "BF Agent — 금융사기 탐지 (호야)",
-  "description": "보이스피싱·스미싱·투자사기 상황에서 fraud_detection_agent(호야)가 위험도를 정확히 판정하고 신고 방법을 안내하는지 검증합니다.",
+  "description": "6대 사기 유형별 위험도 판정, 신고 안내, 피해 발생 시 대처 플로우를 검증합니다.",
   "eval_cases": [
 
     {
@@ -103,6 +103,60 @@
         }
       ],
       "session_input": {"app_name": "app", "user_id": "fraud_user_5", "state": {}}
+    },
+
+    {
+      "eval_id": "messenger_family_phishing",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "카카오톡으로 딸이라고 하면서 핸드폰이 고장났는데 돈이 급하게 필요하다고 계좌번호를 보내줬어요."}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "위험도가 높습니다. 가족을 사칭한 메신저 피싱 수법입니다. 송금 전에 반드시 자녀에게 직접 전화로 확인하십시오. 이미 송금하셨다면 즉시 은행에 지급정지를 요청하십시오."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_6", "state": {}}
+    },
+
+    {
+      "eval_id": "kidnap_ransom_threat",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "아들이 납치됐다고 전화가 왔어요. 돈을 보내야 풀어준다고 해서 너무 무섭습니다."}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "위험도가 높습니다. 납치 협박을 빙자한 보이스피싱 수법입니다. 절대 송금하지 마시고, 즉시 자녀에게 직접 연락하신 후 경찰청 112에 신고하십시오."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_7", "state": {}}
+    },
+
+    {
+      "eval_id": "fraud_after_transfer",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "아까 사기인 줄 모르고 200만원을 보내버렸어요. 어떻게 해야 하나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "즉시 해당 은행 콜센터에 전화하여 지급정지를 신청하십시오. 그 후 경찰청 112에 신고하고, 금융감독원 1332에 피해 상담을 받으십시오. 빠를수록 자금 회수 가능성이 높아집니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_8", "state": {}}
     }
 
   ]
