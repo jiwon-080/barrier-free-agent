@@ -41,6 +41,7 @@ from .macro_tool import get_macro_indicators
 from .product_tool import search_products, get_product_detail, compare_products, get_isa_info, get_irp_info
 from .simulation_tool import calculate_tax_saving, calculate_maturity_amount, calculate_pension_payout
 from .fraud_tool import check_fraud_pattern
+from .user_memory import load_user_memory, save_user_memory
 
 os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "False")
 
@@ -325,7 +326,21 @@ def _after_tool_callback(tool, args, tool_context: CallbackContext, tool_respons
 
 
 # ── 콜백: 에이전트 실행 전 사용자 프로필 요약 주입 ───────────────────────────
+_SESSION_MEMORY_LOADED = "user:_memory_loaded"
+
 def _before_agent_callback(callback_context: CallbackContext):
+    # 세션 최초 진입 시 파일 메모리에서 프로필 로드 (이후 턴은 스킵)
+    if not callback_context.state.get(_SESSION_MEMORY_LOADED):
+        user_id = callback_context.user_id
+        mem = load_user_memory(user_id)
+        if mem.get("investment_profile") and not callback_context.state.get("user:investment_profile"):
+            callback_context.state["user:investment_profile"] = mem["investment_profile"]
+        if mem.get("literacy_level") and not callback_context.state.get("user:literacy_level"):
+            callback_context.state["user:literacy_level"] = mem["literacy_level"]
+        if mem.get("product_interests") and not callback_context.state.get("user:product_interests"):
+            callback_context.state["user:product_interests"] = mem["product_interests"]
+        callback_context.state[_SESSION_MEMORY_LOADED] = True
+
     interests = list(callback_context.state.get("user:product_interests") or [])
     profile = callback_context.state.get("user:investment_profile") or ""
     literacy = callback_context.state.get("user:literacy_level") or ""
@@ -342,6 +357,26 @@ def _before_agent_callback(callback_context: CallbackContext):
         "\n".join(lines) if lines else "파악된 정보 없음"
     )
     return None
+
+
+# ── 콜백: 에이전트 실행 후 프로필 파일 저장 ──────────────────────────────────
+def _after_agent_callback(callback_context: CallbackContext, response):
+    # 사용자가 메모리 저장을 거절한 경우 저장하지 않음
+    if callback_context.state.get("user:memory_consent") == "declined":
+        return response
+
+    user_id = callback_context.user_id
+    profile = callback_context.state.get("user:investment_profile") or ""
+    literacy = callback_context.state.get("user:literacy_level") or ""
+    interests = list(callback_context.state.get("user:product_interests") or [])
+
+    if profile or literacy:
+        save_user_memory(user_id, {
+            "investment_profile": profile,
+            "literacy_level": literacy,
+            "product_interests": interests,
+        })
+    return response
 
 
 # ── 배리어프리 에이전트 정의 ──────────────────────────────────────────────────
@@ -478,6 +513,7 @@ barrier_free_agent = Agent(
         AgentTool(agent=fraud_detection_agent),
     ],
     before_agent_callback=_before_agent_callback,
+    after_agent_callback=_after_agent_callback,
     after_tool_callback=_after_tool_callback,
 )
 
