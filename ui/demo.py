@@ -15,6 +15,7 @@ from google.genai import types as genai_types
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.navigation_tool import navigate_ui
+from app.user_memory import MEMORY_DIR
 
 # ── 디자인 상수 ───────────────────────────────────────────────────────────────
 NH_GREEN = "#00A550"
@@ -298,6 +299,26 @@ def _set_profile_direct(investment_profile: str = "", literacy_level: str = "") 
             session.state["user:literacy_level"] = literacy_level
     except Exception:
         pass
+
+
+def _reset_user_memory() -> None:
+    """파일 메모리 + 세션 상태 모두 초기화."""
+    from app.user_memory import delete_user_memory
+    delete_user_memory("demo_user")
+    try:
+        svc = _get_session_service()
+        session = svc.get_session_sync(
+            app_name="app", user_id="demo_user", session_id="demo_session"
+        )
+        if session:
+            for key in ["user:investment_profile", "user:literacy_level",
+                        "user:product_interests", "user:_memory_loaded"]:
+                session.state.pop(key, None)
+    except Exception:
+        pass
+    st.session_state.pop("_ui_inv", None)
+    st.session_state.pop("_ui_literacy", None)
+    st.session_state.pop("_memory_consent", None)
 
 
 def _fallback_highlight(text: str) -> str:
@@ -690,10 +711,56 @@ def agent_popup():
             unsafe_allow_html=True,
         )
 
+        # ── 메모리 동의 배너 (최초 1회) ──
+        if st.session_state.get("_memory_consent") is None:
+            has_file = (MEMORY_DIR / "demo_user.md").exists()
+            if not has_file:
+                with st.container(border=True):
+                    st.markdown(
+                        '<div style="font-size:12px;line-height:1.6;color:#555;">'
+                        '💾 <b>맞춤 안내 저장 안내</b><br>'
+                        '다음 방문 시에도 투자성향·금융이해도를 기억해 드립니다.<br>'
+                        '개인 식별 정보(이름·계좌)는 저장하지 않습니다.'
+                        '</div>',
+                        unsafe_allow_html=True,
+                    )
+                    mc1, mc2 = st.columns(2)
+                    with mc1:
+                        if st.button("✅ 동의", key="mem_agree", use_container_width=True, type="primary"):
+                            st.session_state["_memory_consent"] = "granted"
+                            st.rerun()
+                    with mc2:
+                        if st.button("❌ 거절", key="mem_decline", use_container_width=True):
+                            st.session_state["_memory_consent"] = "declined"
+                            # ADK 세션 state에도 거절 기록 → _after_agent_callback에서 저장 차단
+                            try:
+                                svc = _get_session_service()
+                                sess = svc.get_session_sync(
+                                    app_name="app", user_id="demo_user", session_id="demo_session"
+                                )
+                                if sess:
+                                    sess.state["user:memory_consent"] = "declined"
+                            except Exception:
+                                pass
+                            st.rerun()
+            else:
+                st.session_state["_memory_consent"] = "granted"
+
         # 사용자 프로필 배지 (표시용 캐시 우선, 없으면 ADK state)
         inv      = st.session_state.get("_ui_inv", "")
         literacy = st.session_state.get("_ui_literacy", "")
         interests = get_user_profile().get("product_interests", [])
+
+        # 파일 메모리에서 로드된 경우 세션 UI 캐시 동기화
+        if not inv or not literacy:
+            _p = get_user_profile()
+            if _p.get("investment_profile") and not inv:
+                inv = _p["investment_profile"]
+                st.session_state["_ui_inv"] = inv
+            if _p.get("literacy_level") and not literacy:
+                literacy = _p["literacy_level"]
+                st.session_state["_ui_literacy"] = literacy
+
         if inv or literacy or interests:
             _LITERACY_LABEL = {"기초": "📗 기초", "일반": "📘 일반", "전문가": "📕 전문가"}
             chip_parts = (
@@ -701,14 +768,18 @@ def agent_popup():
                 + ([inv] if inv else [])
                 + interests[:2]
             )
+            mem_icon = "💾" if (MEMORY_DIR / "demo_user.md").exists() else "👤"
             st.markdown(
                 f'<div style="background:{NH_LIGHT_GREEN};border-radius:20px;'
                 f'padding:5px 14px;font-size:12px;color:{NH_GREEN};'
                 f'font-weight:600;display:inline-block;">'
-                f'👤 {" · ".join(chip_parts)}'
+                f'{mem_icon} {" · ".join(chip_parts)}'
                 f'</div>',
                 unsafe_allow_html=True,
             )
+            if st.button("🗑️ 기억 초기화", key="mem_reset", use_container_width=False):
+                _reset_user_memory()
+                st.rerun()
 
         # 금융이해도 미설정 시 선택 칩 표시
         if not literacy:
