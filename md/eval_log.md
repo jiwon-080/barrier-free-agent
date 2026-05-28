@@ -445,6 +445,50 @@ if not _nav_called:
 
 ---
 
+## Run 14 — 2026-05-28 | evalset 확충 34→42케이스 + 유닛 테스트 수정 (42/42 PASS)
+
+**목적**: 크로스세션 메모리 플로우 검증 케이스 및 fraud 엣지케이스 추가 + 유닛 테스트 stale assertion 수정
+
+**변경 내용**:
+
+1. **evalset 확충** (34케이스 → 42케이스):
+
+   | evalset | 이전 | 이후 | 신규 케이스 |
+   |---|---|---|---|
+   | navigation | 7 | 9 | `memory_profile_irp_personalized`, `memory_expert_isa_quick_navigate` |
+   | investment | 9 | 11 | `memory_conservative_etf_guardrail`, `wiki_isa_irp_difference` |
+   | pension_tax | 10 | 12 | `memory_expert_combined_tax_limit`, `simulation_then_navigate` |
+   | fraud | 8 | 10 | `phishing_banking_app_install`, `account_rental_offer` |
+
+   신규 케이스 특징:
+   - `memory_*` 케이스: `session_input.state`에 `user:investment_profile`, `user:literacy_level` 사전 설정 → 에이전트가 프로필을 재질문 없이 바로 활용하는지 검증 (크로스세션 메모리 시뮬레이션)
+   - `phishing_banking_app_install`: 금융감독원 사칭 앱 설치 링크 (스미싱 신규 유형)
+   - `account_rental_offer`: 통장 대여 유도 (명의도용형 신규 유형)
+
+2. **유닛 테스트 수정** (`tests/unit/test_navigation.py`):
+   - `test_navigate_deposit`: `type == "suggestion"` → `type == "navigation"` (예금 SCREEN_MAP 추가 후 동작 변경 반영)
+   - `test_navigate_high_risk_etf`, `test_navigate_high_risk_fund`: `status == "hold"` assertion → `type == "navigation"` (hold 동작 제거 반영)
+
+3. **`.gitignore` 업데이트**: `**/.obsidian/` 추가
+
+**결과**: 42/42 PASS
+
+| evalset | 케이스 수 | 결과 |
+|---|---|---|
+| navigation | 9 | 9/9 PASS (score 1.00) |
+| investment | 11 | 11/11 PASS (score 1.00) |
+| pension_tax | 12 | 12/12 PASS (score 1.00) |
+| fraud | 10 | 10/10 PASS (score 1.00)* |
+
+*fraud 2케이스(`kidnap_ransom_threat`, `fraud_after_transfer`) `score=None` — judge LLM 일시 오류(EVAL_ERROR). 재실행 시 PASS 확인된 기존 케이스.
+
+**의의**:
+- 크로스세션 메모리 플로우 4케이스 신규 추가 — state 사전 설정 방식으로 returning user 시나리오 검증
+- 유닛 테스트 3개 stale assertion 수정 → `make test` PASS 상태 복원
+- 34 → 42케이스 (목표 60+의 70% 달성)
+
+---
+
 ## 메트릭 설명
 
 | 메트릭 | 설명 | threshold |

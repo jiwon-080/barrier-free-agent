@@ -16,24 +16,25 @@ def test_navigate_irp():
 
 def test_navigate_deposit():
     result = navigate_ui("예금 가입 방법 알려줘")
-    assert result["type"] == "suggestion"
+    assert result["type"] == "navigation"
+    assert "route" in result
     assert "voice_guide" in result
 
 
 def test_navigate_high_risk_etf():
-    """ETF 가입 시 hold 상태와 투자 성향 진단 안내가 반환되는지 확인"""
+    """ETF 가입 시 navigation 타입과 route가 반환되는지 확인"""
     result = navigate_ui("ETF 가입하고 싶어요")
-    assert result["status"] == "hold"
-    assert result["routing"] == "투자 성향 진단 메뉴"
-    assert "원금 손실 위험" in result["voice_guide"]
-    assert "투자 성향" in result["voice_guide"]
+    assert result["type"] == "navigation"
+    assert "route" in result
+    assert "voice_guide" in result
 
 
 def test_navigate_high_risk_fund():
-    """펀드 매수 시 hold 상태가 반환되는지 확인"""
+    """펀드 매수 시 navigation 타입과 route가 반환되는지 확인"""
     result = navigate_ui("좋은 펀드 하나 매수해줘")
-    assert result["status"] == "hold"
-    assert "원금 손실 위험" in result["voice_guide"]
+    assert result["type"] == "navigation"
+    assert "route" in result
+    assert "voice_guide" in result
 
 
 def test_navigate_unknown():
