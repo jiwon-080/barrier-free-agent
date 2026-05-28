@@ -394,6 +394,57 @@ if not _nav_called:
 
 ---
 
+## Run 13 — 2026-05-28 | 프롬프트 다이어트 + Hermes 메모리 + 콜백 버그픽스 (34/34 PASS)
+
+**목적**: 프롬프트 다이어트(instruction 압축) + Hermes 스타일 크로스세션 메모리 구현 + `after_agent_callback` 시그니처 버그 수정 후 회귀 확인
+
+**변경 내용**:
+
+1. **`app/user_memory.py` 신규 생성** — Hermes 스타일 크로스세션 사용자 메모리:
+   - `memory/users/{user_id}.md` YAML 프론트매터에 투자성향·금융이해도·관심상품 저장
+   - `load_user_memory` / `save_user_memory` / `delete_user_memory` 3개 함수
+   - eval 사용자(`nav_user_`, `inv_user_`, `pt_user_`, `fraud_user_`, `eval_user_`) 자동 스킵
+
+2. **`app/agent.py` — 메모리 콜백 통합**:
+   - `_before_agent_callback`: 세션 최초 진입 시 파일 메모리 로드, `_SESSION_MEMORY_LOADED` 플래그로 중복 방지
+   - `_after_agent_callback(callback_context)`: 세션 종료 후 파일 저장 (동의 거절 시 스킵)
+   - `after_agent_callback=_after_agent_callback` 등록
+
+3. **`app/agent.py` — 프롬프트 다이어트** (instruction token 압축):
+   - `pension_tax_agent`: `{_glossary_wiki}` 섹션 제거 (~1,038 토큰 절약). 용어 사전은 `investment_agent`에만 유지.
+   - `investment_agent`: `[핵심 원칙]` + `[도구 사용 지침]` 중복·장황 표현 압축
+   - `barrier_free_agent`: Step 1/2/3 내비게이션 구조 + 8개 금지 표현 목록 + `[구조화된 도구 응답 처리 규칙]` 압축
+
+4. **`app/agent.py` — `after_agent_callback` 시그니처 버그픽스** (크리티컬):
+   - Before (버그): `def _after_agent_callback(callback_context, response)` — ADK가 인자 1개로 호출해 TypeError 발생 → 최종 응답이 None으로 교체됨
+   - After (수정): `def _after_agent_callback(callback_context)` — 부수효과만 실행하고 `None` 반환
+   - ADK `AfterAgentCallback` 타입 시그니처: `Callable[[CallbackContext], Optional[types.Content]]`
+
+5. **`ui/demo.py` — 메모리 동의 UI 추가**:
+   - 최초 방문 시 동의 배너 (✅동의 / ❌거절)
+   - 프로필 뱃지 💾/👤 아이콘, 기억 초기화 버튼
+   - `_reset_user_memory()`: 파일 삭제 + 세션 상태 초기화
+
+**결과**: 34/34 PASS
+
+| evalset | 케이스 수 | 결과 |
+|---|---|---|
+| navigation | 7 | 7/7 PASS (score 1.00) |
+| investment | 9 | 9/9 PASS (score 1.00) |
+| fraud | 8 | 8/8 PASS (score 1.00) |
+| pension_tax | 10 | 10/10 PASS (score 1.00) |
+
+**트러블슈팅**:
+- **`after_agent_callback` 시그니처 버그**: 메모리 구현 중 ADK 콜백 시그니처 오해. `(callback_context, response)` 형태로 구현했으나 ADK는 `(callback_context)` 하나만 전달. TypeError 발생 → inference 결과가 None으로 평가돼 eval에서 `len(inference_result.inferences)` 호출 시 TypeError 연쇄. 수정 후 전 케이스 PASS.
+- **ADC 자격증명 없음 오해**: eval TypeError를 ADC 미설정으로 잘못 진단. 실제로는 콜백 버그가 inference 결과를 None으로 만들어 동일한 TypeError 발생시킨 것. GOOGLE_API_KEY는 시스템 환경변수로 정상 설정.
+
+**의의**:
+- Hermes 스타일 크로스세션 메모리 완성: 세션 최초 진입 시 파일에서 프로필 로드, 세션 종료 시 자동 저장
+- 프롬프트 다이어트로 `pension_tax_agent` 용어사전 중복 주입 제거 (~1,038 토큰)
+- eval 34/34 PASS — 프롬프트 변경 및 콜백 버그픽스가 기존 케이스 품질에 영향 없음 확인
+
+---
+
 ## 메트릭 설명
 
 | 메트릭 | 설명 | threshold |
