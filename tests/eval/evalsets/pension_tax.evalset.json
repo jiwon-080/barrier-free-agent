@@ -270,6 +270,63 @@
         }
       ],
       "session_input": {"app_name": "app", "user_id": "pt_user_10", "state": {}}
+    },
+
+    {
+      "eval_id": "memory_expert_combined_tax_limit",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "IRP와 ISA를 동시에 운용할 때 세액공제 한도를 어떻게 최적화하면 되나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "pension_tax_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP 납입 한도는 연간 1,800만 원(세액공제 한도 900만 원)이며, ISA 만기 후 IRP 전환 시 전환금액의 10%(최대 300만 원)를 추가 세액공제 받으실 수 있습니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "pt_user_11",
+        "state": {
+          "user:literacy_level": "전문가",
+          "user:investment_profile": "위험중립형"
+        }
+      }
+    },
+
+    {
+      "eval_id": "simulation_then_navigate",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "IRP에 5000만원 있는데 65세부터 15년간 받으면 한 달에 얼마 정도 되나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "pension_tax_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "5,000만 원을 15년(180개월) 균등 수령 시 월 약 27만 8천 원입니다."}]
+          }
+        },
+        {
+          "invocation_id": "inv_2",
+          "user_content": { "parts": [{"text": "알겠어요. IRP 가입하고 싶은데 화면 이동해 주세요."}] },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_irp_info", "args": {}},
+              {"name": "navigate_ui", "args": {}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP 신규가입 화면으로 이동해 드리겠습니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "pt_user_12", "state": {}}
     }
 
   ]
