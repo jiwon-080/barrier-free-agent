@@ -28,16 +28,17 @@
   - 임베딩·벡터 DB 없음 — wiki md 파일 직접 검색 후 LLM context에 주입
 - [x] `app/graph_rag_tool.py` 등 RAG 관련 app 코드 정리 ✅ 완료 (2026-05-26)
 
-### 1-2. Hermes 스타일 메모리 구조
+### 1-2. Hermes 스타일 메모리 구조 ✅ 완료 (2026-05-28)
 - [ ] `memory/agents/` — 에이전트별 스킬 문서
   - `investment_agent_skills.md`, `pension_tax_agent_skills.md` 등
   - 복잡한 케이스 해결 후 에이전트가 자동 append
-- [ ] `memory/users/{user_id}.md` — 사용자 세션 메모리
-  - 투자성향, 금융이해도, 관심 상품, 대화 핵심 요약 (대화 전문 미저장)
-  - `_before_agent_callback`에서 해당 md 읽어 컨텍스트 주입
-  - `_after_tool_callback`에서 세션 종료 시 자동 업데이트
-- [ ] 사용자 동의 문구 UI 추가 (개인정보보호법)
-  - "다음 방문 시 맞춤 안내를 위해 투자성향·금융이해도를 저장합니다"
+- [x] `memory/users/{user_id}.md` — 사용자 세션 메모리 ✅
+  - 투자성향, 금융이해도, 관심 상품 저장 (YAML 프론트매터)
+  - `_before_agent_callback`에서 파일 로드 → 세션 state 주입
+  - `_after_agent_callback`에서 세션 종료 시 자동 저장
+  - eval 사용자 prefix(`nav_user_`, `pt_user_` 등) 자동 스킵
+- [x] 사용자 동의 문구 UI 추가 (개인정보보호법) ✅
+  - demo.py: 최초 방문 시 동의 배너, 💾/👤 뱃지, 기억 초기화 버튼
 
 ### 1-3. 사용자 페르소나 few-shot (Nemotron-Personas-Korea)
 - [ ] `nvidia/Nemotron-Personas-Korea` 데이터셋에서 age 55~80, 은퇴/주부/농업 직군 프로파일 10~20개 추출
@@ -159,6 +160,7 @@ system_improvement_agent     (에이전트 스킬 문서 큐레이터)
   - `fraud_detection_agent` → **"호야"** (든든하고 용맹한 호랑이)
     - 사기와 위협으로부터 자산을 지키는 호랑이. 침착하고 단호하며, 위험 감지 시 절도 있고 명확한 어조로 경고하고 대응 방법을 안내.
 
-### 6-7. 프롬프트 다이어트
-- [ ] `barrier_free_agent` instruction 중복 규칙 정리, 위임 조건 단순화
-- [ ] 분리된 에이전트들의 instruction은 각자 역할에만 집중하도록 축약
+### 6-7. 프롬프트 다이어트 ✅ 완료 (2026-05-28)
+- [x] `pension_tax_agent`: 용어사전(`{_glossary_wiki}`) 중복 주입 제거 (~1,038 토큰)
+- [x] `investment_agent`: `[핵심 원칙]` + `[도구 사용 지침]` 압축
+- [x] `barrier_free_agent`: 내비게이션 규칙·금지 표현 목록·도구 응답 처리 규칙 압축
