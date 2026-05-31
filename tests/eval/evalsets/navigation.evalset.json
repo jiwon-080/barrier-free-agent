@@ -195,6 +195,61 @@
         }
       ],
       "session_input": {"app_name": "app", "user_id": "nav_user_7", "state": {}}
+    },
+
+    {
+      "eval_id": "memory_profile_irp_personalized",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "IRP 가입하고 싶어요."}] },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_irp_info", "args": {"investment_profile": "위험회피형"}},
+              {"name": "navigate_ui", "args": {}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "원금손실 위험이 있으니 원리금보장형 상품 위주로 구성하십시오. IRP 신규가입 화면으로 이동해 드리겠습니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "nav_user_8",
+        "state": {
+          "user:investment_profile": "위험회피형",
+          "user:literacy_level": "기초"
+        }
+      }
+    },
+
+    {
+      "eval_id": "memory_expert_isa_quick_navigate",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "ISA 신규 계좌 개설 화면 바로 보여주세요."}] },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "get_isa_info", "args": {}},
+              {"name": "navigate_ui", "args": {}}
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "ISA 신규가입 화면으로 이동해 드리겠습니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "nav_user_9",
+        "state": {
+          "user:literacy_level": "전문가"
+        }
+      }
     }
 
   ]

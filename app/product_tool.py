@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 BASE_DIR = Path(__file__).parent.parent
-PRODUCT_PATH = BASE_DIR / "data" / "rag" / "fss_product.json"
+PRODUCT_PATH = BASE_DIR / "data" / "source" / "fss_product.json"
 
 # join_deny 코드 → 사람이 읽을 수 있는 텍스트
 _JOIN_DENY_MAP = {"1": "제한없음", "2": "서민전용", "3": "일부제한"}

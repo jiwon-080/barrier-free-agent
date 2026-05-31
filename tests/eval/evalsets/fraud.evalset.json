@@ -157,6 +157,42 @@
         }
       ],
       "session_input": {"app_name": "app", "user_id": "fraud_user_8", "state": {}}
+    },
+
+    {
+      "eval_id": "phishing_banking_app_install",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "금융감독원에서 보안 강화를 위해 앱을 설치하라고 링크가 왔어요. 클릭해도 되나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "스미싱 사기입니다. 금융감독원은 앱 설치 링크를 문자로 발송하지 않습니다. 링크를 클릭하지 마시고 KISA 118에 신고하십시오."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_9", "state": {}}
+    },
+
+    {
+      "eval_id": "account_rental_offer",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "어떤 사람이 통장을 잠깐 빌려주면 50만원을 주겠다고 해요. 괜찮을까요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "fraud_detection_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "통장 대여는 명의도용 범죄입니다. 절대 빌려주지 마십시오. 보이스피싱 자금 세탁에 이용될 경우 본인도 전자금융거래법 위반으로 처벌받을 수 있습니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "fraud_user_10", "state": {}}
     }
 
   ]
