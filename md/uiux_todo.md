@@ -4,15 +4,12 @@
 
 ---
 
-## 1. 레이아웃 — 하단 탭바 (최우선)
+## 1. 레이아웃 — 하단 탭바 (최우선) ✅ 완료 (2026-05-31)
 
-> 실제 앱: 항상 고정된 하단 탭 (홈 / 금융상품 / 내자산 / 포인트쌓기 / 생활혜택)
-> 현재 demo.py: 없음 → 화면 이동 방법이 불분명함
-
-- [ ] `st.components.v1.html` 또는 CSS `position: fixed; bottom: 0`으로 하단 탭바 구현
-- [ ] 탭 항목: **홈 / 금융상품 / 내자산** (데모 범위 3개로 축소)
-- [ ] 현재 탭 활성 상태 표시 (NH_GREEN 아이콘 + 텍스트)
-- [ ] 탭 클릭 → `session_state["current_route"]` 변경 + `st.rerun()`
+- [x] CSS `position: fixed; bottom: 0`으로 하단 탭바 구현
+- [x] 탭 항목: **홈 / 금융상품 / 내자산** (3개)
+- [x] 현재 탭 활성 상태 표시 (NH_GREEN + border-top)
+- [x] 탭 클릭 → `session_state["current_route"]` 변경 + `st.rerun()`
 
 ---
 
@@ -23,21 +20,18 @@
 
 - [ ] 우측 상단 **큰글 토글** → `session_state["bigtext_mode"]` bool로 관리
 - [ ] 큰글 모드 ON 시: 배너 "배리어프리 도우미에게 물어보세요" + 큰 버튼 2개(전체계좌조회 / ATM출금) → bigtext 전용 홈 레이아웃으로 분기
-- [ ] 퀵메뉴 아이콘 그리드: 올원계좌등록 / 전체계좌조회 / 공과금납부 / 알뜰환전 (실제 앱과 동일 구성)
+- [x] 퀵메뉴 아이콘 그리드 구현 (전체계좌조회 / ATM출금 / 금융상품 / 안전한금융)
 - [ ] 배리어프리 도우미 배너는 홈에서 제거 → **에이전트는 FAB 버튼 + 하단 팝업**으로 대체 (섹션 5 참조)
 
 ---
 
-## 3. 금융상품 화면 — 아이콘 그리드
+## 3. 금융상품 화면 — 아이콘 그리드 ✅ 완료 (2026-05-31)
 
-> 실제 앱: 컬러 아이콘 2×4 그리드 (입출금/예금/적금/주택청약/펀드/대출/외환/퇴직연금/신탁/ISA/보험/골드실버바)
-> 현재 demo.py: 텍스트 리스트 (`menu_item()`) → 실제 앱과 전혀 다름
-
-- [ ] `st.columns(4)` 기반 아이콘 그리드로 교체
-- [ ] 각 항목: 이모지 아이콘 + 한글 라벨 + 버튼 클릭 시 route 이동
+- [x] `st.columns(4)` 기반 아이콘 그리드로 교체
+- [x] 각 항목: 이모지 아이콘 + 한글 라벨 + 버튼 클릭 시 route 이동
 - [ ] 상단 배너 슬롯 (추천 상품 1개, 고정 텍스트로 대체 가능)
-- [ ] 해시태그 칩 필터 (#사회초년생 / #직장인 / #개인사업자) — 클릭해도 현재는 동작 없어도 됨 (시각적 완성도용)
-- [ ] **ISA 화면** 추가: `screen_isa()` + SCREEN_MAP 등록 + navigation_tool의 `financial_products/isa` route 연결
+- [x] 해시태그 칩 필터 (#사회초년생 / #직장인 / #개인사업자) — 시각적 완성도용
+- [x] **ISA 화면** 추가: `screen_isa()` + SCREEN_MAP 등록 + navigation_tool 연결
 
 ---
 
@@ -53,95 +47,72 @@
 
 ---
 
-## 5. 에이전트 — FAB 버튼 + 하단 팝업 (핵심)
+## 5. 에이전트 — FAB 버튼 + 하단 팝업 ✅ 완료 (2026-05-31)
 
-> 별도 채팅 페이지로 이동하지 않음. 현재 화면 위에 오버레이로 뜨는 방식.
-> 사용자가 지금 보고 있는 화면을 유지한 채로 질문하고, 에이전트가 그 자리에서 답하거나 이동 제안.
+### 5-1. FAB (플로팅 동그란 버튼) ✅
+- [x] 모든 화면에 항상 표시: `position: fixed; bottom: 72px; right: 16px`
+- [x] 디자인: NH_GREEN 원형 버튼, 그림자 효과
+- [x] `@st.dialog` 기반 팝업 열림/닫힘 관리
 
-### 5-1. FAB (플로팅 동그란 버튼)
-- [ ] 모든 화면에 항상 표시: `position: fixed; bottom: 72px; right: 16px` (하단 탭바 위)
-- [ ] 디자인: NH_GREEN 원형 버튼, 로봇/마이크 아이콘, 그림자 효과
-- [ ] 상태 표시: 기본(초록) / 에이전트 응답 대기 중(펄스 애니메이션) / 팝업 열림(X 아이콘으로 변경)
-- [ ] `session_state["agent_popup_open"]` bool로 팝업 열림/닫힘 관리
-
-### 5-2. 하단 팝업 (Bottom Sheet)
-- [ ] FAB 클릭 → 아래에서 슬라이드업 되는 팝업 (CSS `transform: translateY` + `transition`)
-- [ ] 팝업 높이: 화면의 약 60% (`max-height: 60vh`)
-- [ ] **상단 — 에이전트 소개 영역** (최초 1회 또는 대화 없을 때):
-  - 로봇 아이콘 + "안녕하세요, 배리어프리 도우미입니다 🤖"
-  - 예시 질문 칩 3개: `IRP가 뭔가요?` / `기준금리 알려줘` / `퇴직연금 가입하고 싶어요`
-  - 예시 칩 클릭 → 해당 텍스트로 즉시 질문 전송
-- [ ] **중간 — 대화 내역** (질문/답변이 생기면 스크롤 가능하게 표시):
-  - 사용자 발화: 우측 정렬, NH_GREEN 말풍선
-  - 에이전트 답변: 좌측 정렬, 회색 카드
-  - navigate 결과 있을 경우: "📍 **퇴직연금** 화면으로 이동할까요?" 인라인 카드 + **예 / 아니오** 버튼
-    - 예 → 팝업 닫힘 + route 이동 + highlight_target 적용 (기존 CSS 애니메이션 유지)
-    - 아니오 → 카드 사라지고 대화 계속
-- [ ] **하단 — 입력 영역** (팝업 내 고정):
-  - `[      무엇이든 물어보세요      ] [🎤]`
-  - 텍스트 입력 또는 마이크 버튼으로 음성 입력 (섹션 7 STT 연동)
-- [ ] 팝업 바깥 영역 클릭 또는 X 버튼 → 팝업 닫힘 (대화 내역은 session_state 유지)
+### 5-2. 하단 팝업 (Bottom Sheet) ✅
+- [x] FAB 클릭 → 슬라이드업 팝업 (CSS `transform: translateY` + `transition`)
+- [x] 팝업 높이: 화면의 약 65% (`max-height: 65vh`)
+- [x] 상단 에이전트 소개 영역 (최초 방문 시)
+- [x] 예시 질문 칩 4개 (클릭 → 즉시 질문 전송)
+- [x] 대화 내역 (사용자 우측/에이전트 좌측 말풍선)
+- [x] navigate 결과 → 인라인 카드 + 예/아니오 버튼
+- [x] 입력 영역 (텍스트 + 마이크 버튼)
 
 ---
 
-## 6. ADK Agent 실제 연동
+## 6. ADK Agent 실제 연동 ✅ 완료 (2026-05-31)
 
-> 현재 demo.py: `navigate_ui`를 직접 호출 → 용어설명·상품조회·가드레일이 UI에서 작동 안 함
-
-- [ ] `google.adk.runners.InMemoryRunner` 로 `barrier_free_agent` 실행
-- [ ] `asyncio.run()` 또는 `asyncio.get_event_loop().run_until_complete()` 로 Streamlit 내 비동기 처리
-- [ ] 응답 파싱:
-  - `event.get_function_calls()` 중 `navigate_ui` → route + highlight 추출
-  - `event.text` → 말풍선 텍스트
-- [ ] 로딩 중 `st.spinner("도우미가 답변을 준비하고 있습니다...")` 표시
+- [x] `InMemoryRunner` 로 `barrier_free_agent` 실행
+- [x] 동기 이벤트 루프로 Streamlit 내 처리
+- [x] 응답 파싱: `get_function_calls()` → navigate_ui / get_isa_info / get_irp_info 구조화
+- [x] `event.is_final_response()` → 말풍선 텍스트
+- [x] 로딩 중 thinking card 표시 (도구별 라벨)
 
 ---
 
-## 7. STT / TTS 연동
+## 7. STT / TTS 연동 ✅ 완료 (2026-05-31)
 
-> 실제 앱 큰글도우미: 입력창 우측 마이크 버튼(파란 원) → 음성 입력
-> 목표: 음성 쿼리 → STT → 에이전트 → TTS 응답 + 화면 이동
+### STT (음성 입력) ✅
+- [x] `streamlit_mic_recorder.speech_to_text` — Web Speech API 래퍼
+- [x] 인식된 텍스트 → `session_state["pending_query"]`에 주입 후 `st.rerun()`
+- [x] 마이크 버튼 UI (streamlit_mic_recorder 내장 상태 표시)
 
-### STT (음성 입력)
-- [ ] 브라우저 Web Speech API (`webkitSpeechRecognition`) — JS snippet을 `st.components.v1.html`로 삽입
-- [ ] 인식된 텍스트 → `st.query_params` 또는 `st.session_state`에 주입 후 `st.rerun()`
-- [ ] 마이크 버튼 UI: 대기 중(파란 원) / 녹음 중(빨간 원 + 펄스 애니메이션) 상태 구분
-
-### TTS (음성 출력)
-- [ ] `gTTS(text, lang='ko')` → `BytesIO` → `st.audio(bytes, format='audio/mp3', autoplay=True)`
-- [ ] 에이전트 응답마다 자동 재생 (autoplay=True)
-- [ ] 큰글 모드에서만 TTS 자동 재생, 일반 모드는 수동 재생 버튼으로 구분 (선택)
+### TTS (음성 출력) ✅
+- [x] `gTTS(text, lang='ko')` → `BytesIO` → `st.audio(autoplay=True)`
+- [x] 에이전트 응답마다 자동 재생
+- [ ] 큰글 모드에서만 TTS 자동 재생 (일반 모드는 수동) — 섹션 4 bigtext_mode 구현 후 연동
 
 ---
 
-## 8. 화면별 나머지 보완
+## 8. 화면별 나머지 보완 ✅ 완료 (2026-05-31)
 
-| 화면 | 할 일 |
-|------|-------|
-| `screen_isa()` | ISA 신탁형/일임형 탭 + 주요 정보 카드 (신규 추가) |
-| `screen_retirement_pension()` | 텍스트 리스트 → 아이콘 리스트로 교체 |
-| `screen_irp_tax_saving()` | 실제 앱처럼 체크리스트 형태 유지 (현재 양호) |
-| `screen_my_pension()` | 현재 양호, 유지 |
-| `screen_portfolio()` | 현재 양호, 유지 |
+| 화면 | 상태 |
+|------|------|
+| `screen_isa()` | ✅ 신탁형/일임형 탭 + 주요 정보 카드 + 가입 체크리스트 |
+| `screen_retirement_pension()` | ✅ 아이콘 + menu_item 리스트 |
+| `screen_irp_tax_saving()` | ✅ 체크리스트 형태 유지 |
+| `screen_my_pension()` | ✅ 유지 |
+| `screen_portfolio()` | ✅ 유지 |
 
 ---
 
 ## 우선순위 요약
 
 ```
-🔴 P0 (데모 필수)
-  5-1. FAB 플로팅 버튼
-  5-2. 하단 팝업 (소개 + 대화 + 입력창)
-  6.   ADK Agent 실제 연동
+🔴 P0 (데모 필수) — 완료
+  5.   FAB + 하단 팝업 ✅
+  6.   ADK Agent 실제 연동 ✅
 
-🟡 P1 (완성도)
-  1.   하단 탭바
-  3.   금융상품 아이콘 그리드 + ISA 화면
-  4.   큰글 모드 실제 동작
-  7.   TTS (gTTS, 에이전트 응답 자동 재생)
-  7.   STT (Web Speech API 마이크 버튼)
+🟡 P1 (완성도) — 미구현
+  2.+4. 큰글 모드 실제 동작 (bigtext_mode 상태 + 레이아웃 분기)
+  2.   홈 배너 제거 (FAB으로 완전 대체)
 
 🟢 P2 (있으면 좋음)
-  2.   홈 화면 세부 개선
-  8.   화면별 나머지 보완
+  3.   금융상품 상단 배너 슬롯
+  7.   큰글 모드 TTS 조건 (bigtext_mode 완료 후)
 ```

@@ -28,25 +28,39 @@
   - 임베딩·벡터 DB 없음 — wiki md 파일 직접 검색 후 LLM context에 주입
 - [x] `app/graph_rag_tool.py` 등 RAG 관련 app 코드 정리 ✅ 완료 (2026-05-26)
 
-### 1-2. Hermes 스타일 메모리 구조 ✅ 완료 (2026-05-28)
+### 1-2. Hermes 스타일 메모리 구조 (2026-05-31 부분 완료)
 - [ ] `memory/agents/` — 에이전트별 스킬 문서
   - `investment_agent_skills.md`, `pension_tax_agent_skills.md` 등
   - 복잡한 케이스 해결 후 에이전트가 자동 append
-- [x] `memory/users/{user_id}.md` — 사용자 세션 메모리 ✅
+- [x] `memory/users/{user_id}.md` — 사용자 세션 메모리 ✅ (2026-05-31)
   - 투자성향, 금융이해도, 관심 상품 저장 (YAML 프론트매터)
   - `_before_agent_callback`에서 파일 로드 → 세션 state 주입
   - `_after_agent_callback`에서 세션 종료 시 자동 저장
   - eval 사용자 prefix(`nav_user_`, `pt_user_` 등) 자동 스킵
 - [x] 사용자 동의 문구 UI 추가 (개인정보보호법) ✅
-  - demo.py: 최초 방문 시 동의 배너, 💾/👤 뱃지, 기억 초기화 버튼
+  - `ui/demo.py`: 최초 방문 시 동의 배너, 💾/👤 뱃지, 기억 초기화 버튼 구현
+  - 백엔드: `user:memory_consent` declined 시 저장 스킵
 
-### 1-3. 사용자 페르소나 few-shot (Nemotron-Personas-Korea)
-- [ ] `nvidia/Nemotron-Personas-Korea` 데이터셋에서 age 55~80, 은퇴/주부/농업 직군 프로파일 10~20개 추출
-- [ ] literacy_level별 대표 페르소나 few-shot 예시 작성
-  - 기초 → 68세 은퇴 교사 페르소나 (말투·질문 패턴)
-  - 일반 → 55세 중년 직장인
-  - 전문가 → 금융업 종사자
-- [ ] `_before_agent_callback`에서 literacy_level 기반 해당 few-shot 주입
+### 1-3. 페르소나별 실제 발화 데이터셋 + few-shot 라우팅 레이어 (현직자 조언 반영)
+
+> ❌ Nemotron-Personas-Korea 폐기 — 합성 데이터로 실제 금융 발화와 무관. 실제 소스에서 수집.
+
+**수집 경로**
+- 네이버 지식인 금융 카테고리 (IRP, ISA, 연금, 예금 검색 결과)
+- 네이버 카페 (노후준비, 주부재테크, 시니어재테크)
+- 유튜브 댓글 — 금융사 공식 채널 고령자 시청 비율 높은 영상
+- 금융감독원 금융소비자포털 상담 사례 공개분
+
+**페르소나 타입 및 발화 특징**
+- 노년층: "이거 어떻게 하는건가요", "제가 잘 몰라서요", "은행가면 되나요"
+- 주부층: "남편 월급에서", "애들 학원비 빼고", "노후에 얼마나 받을수있나요"
+- 직장인: "연말정산 때", "한도 다 채우려면", "DC형이랑 DB형 차이가"
+
+**구현**
+- [ ] 페르소나별 실제 발화 20~30개씩 수집 및 정제
+- [ ] 수집된 발화 기반 few-shot 예시 작성 (`data/personas/` 또는 instruction 직접 삽입)
+- [ ] `_before_agent_callback` 앞단에 few-shot 라우팅 레이어 추가
+  - 발화 패턴 → persona_type 판단 → 응답 스타일 가이드 주입
 
 ---
 
@@ -77,7 +91,11 @@
 ## 5. 답변 퀄리티 개선
 - [ ] 고객 상황 반영 없이 동일 답변 나오는 케이스 식별 및 수정
 - [ ] 멀티턴 문맥 활용도 향상 (이전 대화 참조 강화)
-- [ ] evalset 추가 (현재 42케이스 — 목표 60+)
+- [ ] evalset 추가 (현재 42케이스 — 회귀 버그 또는 미커버 시나리오 발견 시 추가)
+- [x] **human eval 셋 구성** ✅ (2026-05-31)
+  - `md/human_eval_checklist.md` 작성 완료
+  - 준법성(C1~C6), 정확성(A1~A6), 적합성(S1~S4), 이해가능성(U1~U5), 말투(T1~T4), 사기탐지(F1~F5)
+  - 우선 검토 케이스 6개 카테고리 지정
 
 ---
 
@@ -101,38 +119,31 @@ system_improvement_agent     (에이전트 스킬 문서 큐레이터)
 **피어 위임 구조**: `simulation_agent`는 `AgentTool`로 감싸 여러 에이전트에 동시 등록.
 `investment_agent`, `pension_tax_agent` 모두 계산이 필요할 때 `simulation_agent`를 호출.
 
-### 6-1. financial_advisor_agent → investment_agent + pension_tax_agent 분리
-- [ ] `app/investment_agent.py` 생성
-  - 도구: `explain_financial_term`, `check_investment_guardrail`, `search_products`, `get_product_detail`, `compare_products`, `get_etf_price`, `get_etf_prices_by_keyword`, `get_macro_indicators`
-  - 페르소나: 꼼꼼하고 객관적인 투자 정보 전문가
+### 6-1. financial_advisor_agent → investment_agent + pension_tax_agent 분리 ✅ 완료 (2026-05-31)
+- [x] `app/investment_agent.py` 별도 파일 분리
   - 스킬 메모리: `memory/agents/investment_agent_skills.md`
-- [ ] `app/pension_tax_agent.py` 생성
-  - 도구: `get_irp_info`, `get_isa_info`, `calculate_tax_saving`, `AgentTool(simulation_agent)`
-  - 페르소나: 퇴직·절세 플래닝 전문가
+- [x] `app/pension_tax_agent.py` 별도 파일 분리
   - 스킬 메모리: `memory/agents/pension_tax_agent_skills.md`
-- [ ] `barrier_free_agent`에서 `financial_advisor_agent` 제거, 두 에이전트로 위임 분기 재설정
+- [x] `barrier_free_agent`에서 `financial_advisor_agent` 제거, 두 에이전트로 위임 분기 재설정 ✅
+- [x] `app/callbacks.py` 공유 콜백 분리 (`_load_knowledge`, `_before/after_agent_callback`, `_after_tool_callback`)
 
-### 6-2. simulation_agent (신규 — 피어)
-- [ ] `app/simulation_agent.py` 생성
+### 6-2. simulation_agent (신규 — 피어) ✅ 완료 (2026-05-31)
+- [x] `simulation_agent` 구현 완료
   - 도구: `calculate_tax_saving`, `calculate_maturity_amount`, `calculate_pension_payout`
-    - `calculate_tax_saving(income, irp_amount, isa_amount, pension_amount)` → 세액공제·환급액
-    - `calculate_maturity_amount(principal, rate, months, product_type)` → 예적금 만기금액
-    - `calculate_pension_payout(balance, start_age, duration_years)` → 연금 수령액 추정
-  - 페르소나: 정확한 수치 계산 전담. 규정 해석 없음, 계산만.
-  - 스킬 메모리: `memory/agents/simulation_agent_skills.md`
-  - `AgentTool(simulation_agent)` → `investment_agent`, `pension_tax_agent` 양쪽에 등록
+  - 페르소나: 토리 🐿️ — 수치 계산 전담
+  - `AgentTool(simulation_agent)` → `investment_agent`, `pension_tax_agent` 양쪽 등록
+- [x] `app/simulation_agent.py` 별도 파일 분리
 
-### 6-3. fraud_detection_agent (신규)
-- [ ] `app/fraud_detection_agent.py` 생성
-  - 도구: `check_fraud_pattern(text)` — 보이스피싱·금융사기 패턴 DB 기반 위험도 판정
-  - 트리거: "이런 문자 받았는데", "전화가 왔는데", "이게 사기인가요"
-  - 페르소나: 침착하고 명확한 보안 전문가
-  - 출력: 위험도(높음/중간/낮음) + 신고 방법 안내
+### 6-3. fraud_detection_agent (신규) ✅ 완료 (2026-05-31)
+- [x] `fraud_detection_agent` 구현 완료
+  - 도구: `check_fraud_pattern(text)` — 6대 사기 유형 패턴 DB 기반 위험도 판정
+  - 페르소나: 호야 🐯 — 침착하고 단호한 보안 전문가
+  - RULE 0: 사기 키워드 감지 시 barrier_free_agent가 즉시 위임
+- [x] `app/fraud_detection_agent.py` 별도 파일 분리
 
 ### 6-4. customer_management_agent (신규 — 백그라운드)
 - [ ] `app/customer_management_agent.py` 생성
   - 역할: 대화 종료 후 `memory/users/{user_id}.md` 업데이트, 피드백 루프 관리
-  - Nemotron 페르소나 프로파일 매칭 및 기록
   - 관리자가 ADK playground에서 "사용자 현황 보고해줘" 로 조회 가능
   - 별도 `admin_app = App(root_agent=customer_management_agent, name="admin")` 으로 분리
 
@@ -142,23 +153,16 @@ system_improvement_agent     (에이전트 스킬 문서 큐레이터)
   - 7일 주기 또는 스킬 문서 10개 누적 시 실행
   - 관리자가 ADK playground에서 "스킬 업데이트 현황 보고해줘" 로 조회 가능
 
-### 6-6. 에이전트 페르소나 추가 (전 에이전트)
+### 6-6. 에이전트 페르소나 추가 ✅ 완료 (2026-05-31)
 
 > **BF Agent** — *Best Friend & Barrier Free*
-> 금융 소외계층 누구에게나 든든한 친구가 되어주는 AI 금융 도우미.
-> 각 에이전트는 동물 캐릭터 페르소나를 가지며, 친근하고 따뜻한 어조로 금융 정보를 전달합니다.
 
-- [ ] 각 에이전트 instruction에 이름·성격·말투 가이드 블록 추가
-  - `barrier_free_agent` → **"뭉치"** (둥글둥글 순한 백구)
-    - 동네 백구처럼 친근하고 따뜻함. 어려운 금융 용어를 풀어서 차근차근, 어르신·초보자도 이해하기 쉽게 인내심 있게 설명.
-  - `investment_agent` → **"나비"** (빠르고 영리한 고양이)
-    - 눈치 빠르고 예리한 고양이처럼 시장 흐름을 짚어냄. 꼼꼼하고 객관적인 투자 정보를 군더더기 없이 세련된 어조로 전달.
-  - `pension_tax_agent` → **"까치"** (좋은 소식을 물어오는 길조)
-    - 퇴직금과 절세 혜택이라는 기쁜 소식을 날쌔게 물어오는 까치. 빈틈없고 신뢰감 있는 톤으로 절세 플랜을 정확히 짚어줌.
-  - `simulation_agent` → **"토리"** (작지만 야무진 다람쥐)
-    - 도토리를 야무지게 굴리는 다람쥐처럼 계산 전담. 수치와 시뮬레이션 결과를 군더더기 없이 간결하고 정확하게 툭 던져줌.
-  - `fraud_detection_agent` → **"호야"** (든든하고 용맹한 호랑이)
-    - 사기와 위협으로부터 자산을 지키는 호랑이. 침착하고 단호하며, 위험 감지 시 절도 있고 명확한 어조로 경고하고 대응 방법을 안내.
+- [x] 전 에이전트 instruction에 이름·성격·말투 가이드 블록 추가
+  - `barrier_free_agent` → **"뭉치"** 🐕 (둥글둥글 순한 백구)
+  - `investment_agent` → **"나비"** 🐱 (빠르고 영리한 고양이)
+  - `pension_tax_agent` → **"까치"** 🐦 (좋은 소식을 물어오는 길조)
+  - `simulation_agent` → **"토리"** 🐿️ (작지만 야무진 다람쥐)
+  - `fraud_detection_agent` → **"호야"** 🐯 (든든하고 용맹한 호랑이)
 
 ### 6-7. 프롬프트 다이어트 ✅ 완료 (2026-05-28)
 - [x] `pension_tax_agent`: 용어사전(`{_glossary_wiki}`) 중복 주입 제거 (~1,038 토큰)
