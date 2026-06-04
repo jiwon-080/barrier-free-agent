@@ -880,14 +880,8 @@ def agent_popup():
         st.divider()
 
     # ── 입력창 (항상 표시) ──
-    col_in, col_mic = st.columns([5, 1])
-    with col_in:
-        user_input = st.text_input(
-            "질문",
-            placeholder="무엇이든 물어보세요",
-            label_visibility="collapsed",
-            key="dialog_text_input",
-        )
+    col_form, col_mic = st.columns([5, 1])
+
     with col_mic:
         from streamlit_mic_recorder import speech_to_text as _stt  # noqa: PLC0415
         stt_text = _stt(
@@ -899,18 +893,19 @@ def agent_popup():
         )
         if stt_text:
             st.session_state["pending_query"] = stt_text
-            st.session_state.pop("dialog_text_input", None)
             st.rerun()
 
-    if st.button("전송 →", key="dialog_send",
-                 use_container_width=True, type="primary"):
-        query = user_input.strip()
-        if query:
-            st.session_state["pending_query"] = query
-            # 위젯 상태 초기화 (다음 오픈 시 빈 입력창)
-            if "dialog_text_input" in st.session_state:
-                del st.session_state["dialog_text_input"]
-            st.rerun()
+    with col_form:
+        with st.form(key="dialog_input_form", clear_on_submit=True, border=False):
+            user_input = st.text_input(
+                "질문",
+                placeholder="무엇이든 물어보세요",
+                label_visibility="collapsed",
+            )
+            if st.form_submit_button("전송 →", use_container_width=True, type="primary"):
+                if user_input.strip():
+                    st.session_state["pending_query"] = user_input.strip()
+                    st.rerun()
 
 
 # ── SUGGEST 칩 파서/렌더러 ────────────────────────────────────────────────────
