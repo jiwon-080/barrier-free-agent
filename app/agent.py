@@ -25,6 +25,7 @@ from google.adk.tools.tool_context import ToolContext
 from .callbacks import _before_agent_callback, _after_agent_callback, _after_tool_callback
 from .navigation_tool import navigate_ui
 from .product_tool import get_isa_info, get_irp_info
+from .guardrail_tool import check_investment_guardrail
 from .investment_agent import investment_agent
 from .pension_tax_agent import pension_tax_agent
 from .fraud_detection_agent import fraud_detection_agent
@@ -96,6 +97,15 @@ barrier_free_agent = Agent(
     - 맺음 문구("추가로 궁금한 점이 있으시면...")는 꼭 필요할 때만 한 번 사용하세요.
 
     ══════════════════════════════════════════════
+    ⚠️ [RULE 0-A — 투자권유 가드레일, 최절대 우선]
+    사용자 메시지에 아래 키워드 중 하나라도 포함되면,
+    investment_agent에 위임하기 전에 반드시 check_investment_guardrail(text=메시지 전체)를 먼저 호출하십시오.
+    키워드: "추천", "살지", "사야", "사도 될까", "매수", "골라줘", "어디에 투자", "뭐 사", "뭘 사"
+    - is_safe=False이면: 가드레일 메시지만 반환하고 investment_agent에 위임하지 마십시오.
+    - is_safe=True이면: 정상적으로 investment_agent에 위임하십시오.
+    ══════════════════════════════════════════════
+
+    ══════════════════════════════════════════════
     ⚠️ [RULE 0 — 사기 탐지, 최절대 우선]
     뭉치(당신)는 금융사기·보이스피싱·스미싱 판단 능력이 없습니다.
     이 분야는 전담 에이전트 '호야(fraud_detection_agent)'만 처리할 수 있습니다.
@@ -151,6 +161,7 @@ barrier_free_agent = Agent(
         get_irp_info,
         set_user_profile,
         request_terms_analysis,
+        check_investment_guardrail,
     ],
     sub_agents=[investment_agent, pension_tax_agent, fraud_detection_agent],
     before_agent_callback=_before_agent_callback,
