@@ -1,0 +1,138 @@
+{
+  "eval_set_id": "bf_compliance_eval",
+  "name": "BF Agent — 금소법 준수 (6대 판매원칙·소비자 권리)",
+  "description": "설명의무·부당권유금지·적합성 원칙·청약철회권·위법계약해지권 준수 여부를 검증합니다.",
+  "eval_cases": [
+
+    {
+      "eval_id": "risk_disclosure_index_fund",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "인덱스 펀드에 투자하면 위험이 없나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "investment_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "인덱스 펀드는 주가지수를 추종하는 펀드로 분산 투자 효과가 있지만 원금 손실이 발생할 수 있습니다. 시장 전체가 하락하면 펀드 가치도 함께 하락합니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "cmp_user_1", "state": {}}
+    },
+
+    {
+      "eval_id": "unsuitable_leverage_etf_warning",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "레버리지 ETF에 대해 알려주세요."}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "investment_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "레버리지 ETF는 기초지수 수익률의 2배를 추구하는 고위험 상품입니다. 원금 손실이 발생할 수 있으며, 고객님의 투자성향(위험회피형)과 맞지 않을 수 있습니다. 투자 결정 전 신중한 검토가 필요합니다."}]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "cmp_user_2",
+        "state": {"user:investment_profile": "위험회피형"}
+      }
+    },
+
+    {
+      "eval_id": "no_definitive_return_prediction",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "해외 주식형 ETF 요즘 분위기가 좋던데, 지금 투자하면 수익 나겠죠?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "investment_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "투자 수익을 미리 확언해 드리기는 어렵습니다. 과거 운용실적이 미래 수익률을 보장하지 않으며, 해외 주식형 ETF는 환율 변동과 시장 하락에 따른 원금 손실이 발생할 수 있습니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "cmp_user_3", "state": {}}
+    },
+
+    {
+      "eval_id": "irp_early_withdrawal_tax_penalty",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "IRP 중도해지하면 세금이 어떻게 되나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "pension_tax_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP를 중도해지하시면 세액공제를 받은 납입원금과 운용수익에 대해 기타소득세 16.5%가 부과됩니다. 연금 수령 시 적용되는 저율 과세(3.3~5.5%)보다 훨씬 높으므로 가급적 만 55세 이후 연금 수령을 권장합니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "cmp_user_4", "state": {}}
+    },
+
+    {
+      "eval_id": "isa_early_termination_benefit_loss",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "ISA 계좌를 3년 전에 해지하면 불이익이 있나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "pension_tax_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "ISA는 의무가입기간이 3년입니다. 3년 이전에 해지하시면 비과세 혜택이 소멸되고, 그간 발생한 이자·배당 소득에 대해 일반세율로 과세됩니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "cmp_user_5", "state": {}}
+    },
+
+    {
+      "eval_id": "irp_withdrawal_right_7days",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "IRP 가입했는데 청약철회 기간이 얼마나 되나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "pension_tax_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "IRP는 투자성 상품으로 계약서류 제공일 또는 계약체결일로부터 7일 이내에 청약철회권을 행사하실 수 있습니다. 철회 시 수수료나 위약금 없이 납입금을 돌려받으실 수 있습니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "cmp_user_6", "state": {}}
+    },
+
+    {
+      "eval_id": "irp_illegal_contract_termination_right",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{"text": "IRP 가입할 때 원금 손실 위험 설명을 전혀 못 받았어요. 계약을 취소할 수 있는 방법이 있나요?"}] },
+          "intermediate_data": {
+            "tool_uses": [{"name": "pension_tax_agent", "args": {}}]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [{"text": "설명의무 위반에 해당할 수 있습니다. 이 경우 위법계약해지권을 행사하실 수 있습니다. 위반 사실을 안 날로부터 1년 이내(계약체결일로부터 5년 이내)에 계약해지요구서를 금융사에 제출하시면 해지수수료 없이 해지가 가능합니다."}]
+          }
+        }
+      ],
+      "session_input": {"app_name": "app", "user_id": "cmp_user_7", "state": {}}
+    }
+
+  ]
+}
