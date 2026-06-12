@@ -186,24 +186,6 @@
     },
 
     {
-      "eval_id": "wiki_investment_profile_neutral",
-      "conversation": [
-        {
-          "invocation_id": "inv_1",
-          "user_content": { "parts": [{"text": "저는 위험중립형이라는데 어떤 상품이 맞나요?"}] },
-          "intermediate_data": {
-            "tool_uses": [{"name": "investment_agent", "args": {}}]
-          },
-          "final_response": {
-            "role": "model",
-            "parts": [{"text": "위험중립형은 적정 수준의 위험을 감수하고 시장 평균 수익을 추구하는 성향입니다. 혼합형 펀드나 채권혼합형 ETF가 적합합니다."}]
-          }
-        }
-      ],
-      "session_input": {"app_name": "app", "user_id": "inv_user_8", "state": {}}
-    },
-
-    {
       "eval_id": "wiki_compound_interest",
       "conversation": [
         {
@@ -243,24 +225,6 @@
           "user:investment_profile": "위험회피형"
         }
       }
-    },
-
-    {
-      "eval_id": "wiki_isa_irp_difference",
-      "conversation": [
-        {
-          "invocation_id": "inv_1",
-          "user_content": { "parts": [{"text": "ISA랑 IRP가 뭐가 달라요?"}] },
-          "intermediate_data": {
-            "tool_uses": [{"name": "investment_agent", "args": {}}]
-          },
-          "final_response": {
-            "role": "model",
-            "parts": [{"text": "ISA는 이자·배당 비과세 혜택을 받는 절세 계좌이고, IRP는 납입액에 대해 세액공제를 받는 퇴직연금 계좌입니다. ISA는 만기 후 자유 인출이 가능하고, IRP는 55세 이후 연금 수령이 원칙입니다."}]
-          }
-        }
-      ],
-      "session_input": {"app_name": "app", "user_id": "inv_user_11", "state": {}}
     }
 
   ]
