@@ -10,9 +10,12 @@ from .guardrail_tool import check_investment_guardrail
 from .krx_tool import get_etf_price, get_etf_prices_by_keyword
 from .macro_tool import get_macro_indicators
 from .product_tool import search_products, get_product_detail, compare_products
+from .skill_memory import make_skill_appender, load_agent_skills
 
 _investment_wiki = _load_knowledge("investment")
 _glossary_wiki = _load_knowledge("glossary")
+_agent_skills = load_agent_skills("investment_agent")
+append_skill = make_skill_appender("investment_agent")
 
 investment_agent = Agent(
     name="investment_agent",
@@ -50,6 +53,11 @@ investment_agent = Agent(
     4. [광고규제 준용] 특정 상품을 다른 상품보다 우수하다고 단정하는 비교 표현 금지.
        비교가 필요하면 반드시 객관적 기준(금리·위험등급·비용)을 명시하세요.
     ══════════════════════════════════════════════
+
+    [스킬 메모리 — 이전 대화에서 축적된 해결 패턴]
+    {_agent_skills}
+    유사한 케이스가 있으면 위 패턴을 참고하세요.
+    새 패턴 발견 시 → append_skill 호출 (example_query에서 수치·이름 제거 필수).
 
     [투자 상품·전략 지식베이스 — KRX·금융투자협회 기준]
     아래 내용은 투자성향 분류, 상품 구조, ETF·펀드·채권 가이드입니다.
@@ -97,6 +105,7 @@ investment_agent = Agent(
         get_etf_prices_by_keyword,
         get_macro_indicators,
         AgentTool(agent=simulation_agent),
+        append_skill,
     ],
     before_agent_callback=_before_agent_callback,
     after_agent_callback=_after_agent_callback,

@@ -4,8 +4,11 @@ from google.adk.models import Gemini
 from google.genai import types
 from .callbacks import _load_knowledge
 from .fraud_tool import check_fraud_pattern
+from .skill_memory import make_skill_appender, load_agent_skills
 
 _fraud_wiki = _load_knowledge("fraud")
+_agent_skills = load_agent_skills("fraud_detection_agent")
+append_skill = make_skill_appender("fraud_detection_agent")
 
 fraud_detection_agent = Agent(
     name="fraud_detection_agent",
@@ -16,6 +19,11 @@ fraud_detection_agent = Agent(
     instruction=f"""
     당신은 BF Agent(Best Friend & Barrier Free)의 금융사기 탐지 에이전트 '호야'입니다. 🐯
     사기와 위협으로부터 자산을 지키는 호랑이처럼, 침착하고 단호하게 위험을 경고합니다.
+
+    [스킬 메모리 — 이전 대화에서 축적된 해결 패턴]
+    {_agent_skills}
+    유사한 케이스가 있으면 위 패턴을 참고하세요.
+    새 패턴 발견 시 → append_skill 호출 (example_query에서 수치·이름 제거 필수).
 
     [금융감독원 금융사기 유형 가이드]
     아래 가이드는 금융감독원 분류 기준의 6대 사기 유형, 예방수칙, 피해 대처 방법입니다.
@@ -43,5 +51,5 @@ fraud_detection_agent = Agent(
 
     합쇼체(~입니다, ~합니다, ~드립니다)만 사용하세요.
     """,
-    tools=[check_fraud_pattern],
+    tools=[check_fraud_pattern, append_skill],
 )

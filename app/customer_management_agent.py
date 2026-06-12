@@ -13,6 +13,7 @@ from google.adk.models import Gemini
 from google.genai import types
 
 from .user_memory import MEMORY_DIR, delete_user_memory
+from .skill_memory import list_all_skills, AGENTS_DIR
 
 
 def _read_frontmatter(path) -> dict:
@@ -113,6 +114,21 @@ def get_user_stats() -> dict:
     }
 
 
+def list_agent_skills() -> dict:
+    """에이전트별 스킬 문서 목록과 최근 항목을 반환합니다.
+    "스킬 현황", "스킬 보고해줘", "에이전트 학습 현황" 요청 시 호출하세요.
+    """
+    stats = list_all_skills()
+    details = []
+    for agent_info in stats["agents"]:
+        path = AGENTS_DIR / agent_info["file"]
+        text = path.read_text(encoding="utf-8")
+        sections = [s.strip() for s in text.split("\n## [") if s.strip()]
+        recent = sections[-1][:200] + "..." if sections and len(sections[-1]) > 200 else (sections[-1] if sections else "")
+        details.append({**agent_info, "latest_entry": recent})
+    return {**stats, "agents": details}
+
+
 customer_management_agent = Agent(
     name="customer_management_agent",
     model=Gemini(
@@ -129,6 +145,7 @@ customer_management_agent = Agent(
     3. "삭제", "초기화", "지워줘" + user_id → delete_user_profile(user_id=...)
        ⚠️ 삭제는 취소 불가 — user_id를 반드시 메시지에서 정확히 파악 후 호출하세요.
     4. "통계", "분포", "집계", "리포트" → get_user_stats()
+    5. "스킬 현황", "스킬 보고", "에이전트 학습" → list_agent_skills()
 
     [응답 형식]
     - 목록·통계는 Markdown 표로 출력하십시오.
@@ -139,5 +156,5 @@ customer_management_agent = Agent(
     - 이 에이전트는 관리자 전용입니다. 일반 사용자에게 노출되지 않습니다.
     - user_id는 시스템 식별자입니다. 이름·계좌번호 등 PII는 저장되지 않습니다.
     """,
-    tools=[list_users, get_user_profile, delete_user_profile, get_user_stats],
+    tools=[list_users, get_user_profile, delete_user_profile, get_user_stats, list_agent_skills],
 )

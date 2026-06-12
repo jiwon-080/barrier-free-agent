@@ -6,8 +6,11 @@ from google.adk.tools.agent_tool import AgentTool
 from .callbacks import _load_knowledge, _before_agent_callback, _after_agent_callback, _after_tool_callback
 from .simulation_agent import simulation_agent
 from .product_tool import get_irp_info, get_isa_info
+from .skill_memory import make_skill_appender, load_agent_skills
 
 _pension_tax_wiki = _load_knowledge("pension_tax")
+_agent_skills = load_agent_skills("pension_tax_agent")
+append_skill = make_skill_appender("pension_tax_agent")
 
 pension_tax_agent = Agent(
     name="pension_tax_agent",
@@ -25,6 +28,11 @@ pension_tax_agent = Agent(
     [사용자 프로필 — 이전 대화에서 파악된 정보]
     {{user_profile_summary}}
     (위 정보가 있으면 불필요한 기초 질문을 생략하고 맞춤 안내를 제공하세요.)
+
+    [스킬 메모리 — 이전 대화에서 축적된 해결 패턴]
+    {_agent_skills}
+    유사한 케이스가 있으면 위 패턴을 참고하세요.
+    새 패턴 발견 시 → append_skill 호출 (example_query에서 수치·이름 제거 필수).
 
     [퇴직연금·절세 지식베이스 — 고용노동부·국세청 기준]
     아래 지식베이스에 정의된 내용은 도구 호출 없이 직접 사용해 답변하세요.
@@ -82,6 +90,7 @@ pension_tax_agent = Agent(
         get_irp_info,
         get_isa_info,
         AgentTool(agent=simulation_agent),
+        append_skill,
     ],
     before_agent_callback=_before_agent_callback,
     after_agent_callback=_after_agent_callback,
