@@ -12,7 +12,7 @@ MEMORY_DIR = Path(__file__).parent.parent / "memory" / "users"
 
 _SKIP_PREFIXES = (
     "nav_user_", "inv_user_", "pt_user_", "fraud_user_",
-    "eval_user_", "_test_",
+    "cmp_user_", "eval_user_", "_test_",
 )
 
 
