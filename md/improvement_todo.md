@@ -33,6 +33,7 @@
   - `investment_agent_skills.md`, `pension_tax_agent_skills.md` 등
   - 복잡한 케이스 해결 후 에이전트가 자동 append
 - [x] `memory/users/{user_id}.md` — 사용자 세션 메모리 ✅ (2026-05-31)
+  - eval 사용자 prefix 스킵 (`cmp_user_` 누락 추가 완료 2026-06-12)
   - 투자성향, 금융이해도, 관심 상품 저장 (YAML 프론트매터)
   - `_before_agent_callback`에서 파일 로드 → 세션 state 주입
   - `_after_agent_callback`에서 세션 종료 시 자동 저장
@@ -91,7 +92,11 @@
 ## 5. 답변 퀄리티 개선
 - [ ] 고객 상황 반영 없이 동일 답변 나오는 케이스 식별 및 수정
 - [ ] 멀티턴 문맥 활용도 향상 (이전 대화 참조 강화)
-- [ ] evalset 추가 (현재 42케이스 — 회귀 버그 또는 미커버 시나리오 발견 시 추가)
+- [x] **evalset 정리** ✅ (2026-06-12)
+  - navigation.evalset.json 삭제 (9케이스 — phantom 도구 전체)
+  - investment: 2케이스 제거 (상품 암시 응답, 도메인 중복)
+  - pension_tax: 5케이스 제거 + 세액공제율 오류 수정 (15%/12% → 16.5%/13.2%)
+  - 49케이스 → 33케이스
 - [x] **human eval 셋 구성** ✅ (2026-05-31)
   - `md/human_eval_checklist.md` 작성 완료
   - 준법성(C1~C6), 정확성(A1~A6), 적합성(S1~S4), 이해가능성(U1~U5), 말투(T1~T4), 사기탐지(F1~F5)
@@ -141,11 +146,11 @@ system_improvement_agent     (에이전트 스킬 문서 큐레이터)
   - RULE 0: 사기 키워드 감지 시 barrier_free_agent가 즉시 위임
 - [x] `app/fraud_detection_agent.py` 별도 파일 분리
 
-### 6-4. customer_management_agent (신규 — 백그라운드)
-- [ ] `app/customer_management_agent.py` 생성
-  - 역할: 대화 종료 후 `memory/users/{user_id}.md` 업데이트, 피드백 루프 관리
-  - 관리자가 ADK playground에서 "사용자 현황 보고해줘" 로 조회 가능
-  - 별도 `admin_app = App(root_agent=customer_management_agent, name="admin")` 으로 분리
+### 6-4. customer_management_agent (신규 — 백그라운드) ✅ 완료 (2026-06-12)
+- [x] `app/customer_management_agent.py` 생성
+  - list_users(), get_user_profile(), delete_user_profile(), get_user_stats() 도구
+  - `admin_app = App(root_agent=customer_management_agent, name="admin")` — agent.py에 추가
+  - `adk web admin` 으로 접근. "사용자 현황 보고해줘" / "통계 보여줘" 등 관리자 발화 지원
 
 ### 6-5. system_improvement_agent (신규 — 백그라운드)
 - [ ] `app/system_improvement_agent.py` 생성
