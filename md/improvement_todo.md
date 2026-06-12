@@ -28,10 +28,13 @@
   - 임베딩·벡터 DB 없음 — wiki md 파일 직접 검색 후 LLM context에 주입
 - [x] `app/graph_rag_tool.py` 등 RAG 관련 app 코드 정리 ✅ 완료 (2026-05-26)
 
-### 1-2. Hermes 스타일 메모리 구조 (2026-05-31 부분 완료)
-- [ ] `memory/agents/` — 에이전트별 스킬 문서
-  - `investment_agent_skills.md`, `pension_tax_agent_skills.md` 등
-  - 복잡한 케이스 해결 후 에이전트가 자동 append
+### 1-2. Hermes 스타일 메모리 구조 ✅ 완료 (2026-06-12)
+- [x] `memory/agents/` — 에이전트별 스킬 문서 ✅ (2026-06-12)
+  - `app/skill_memory.py`: make_skill_appender / load_agent_skills / list_all_skills
+  - investment / pension_tax / fraud_detection 에이전트에 `append_skill` 도구 추가
+  - 스킬 파일 매 프롬프트 주입 (`_agent_skills` f-string)
+  - admin_app `list_agent_skills()` 도구로 조회 가능
+  - TODO: playground 테스트 후 append_skill 트리거 조건 튜닝
 - [x] `memory/users/{user_id}.md` — 사용자 세션 메모리 ✅ (2026-05-31)
   - eval 사용자 prefix 스킵 (`cmp_user_` 누락 추가 완료 2026-06-12)
   - 투자성향, 금융이해도, 관심 상품 저장 (YAML 프론트매터)
