@@ -1,8 +1,8 @@
-memory.md
 **/.obsidian/
 app/.adk/
 data/images/
-data/rag/*.pdf
+data/source/documents/
+memory/users/
 .claude/
 .adk/
 **/.adk/
