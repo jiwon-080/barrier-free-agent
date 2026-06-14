@@ -155,11 +155,14 @@ system_improvement_agent     (에이전트 스킬 문서 큐레이터)
   - `admin_app = App(root_agent=customer_management_agent, name="admin")` — agent.py에 추가
   - `adk web admin` 으로 접근. "사용자 현황 보고해줘" / "통계 보여줘" 등 관리자 발화 지원
 
-### 6-5. system_improvement_agent (신규 — 백그라운드)
-- [ ] `app/system_improvement_agent.py` 생성
-  - 역할: `memory/agents/` 하위 스킬 문서 주기적 정리·병합·삭제 (Hermes 스킬 큐레이터)
-  - 7일 주기 또는 스킬 문서 10개 누적 시 실행
-  - 관리자가 ADK playground에서 "스킬 업데이트 현황 보고해줘" 로 조회 가능
+### 6-5. system_improvement_agent (신규 — 백그라운드) ✅ 완료 (2026-06-14)
+- [x] `app/system_improvement_agent.py` 생성
+  - 도구: `get_curation_status`, `read_skill_file`, `write_skill_file`
+  - 항목 10개 이상 누적 에이전트부터 큐레이션 권장 (threshold)
+  - 병합 안전장치: write 시 항목 수 증가 시 거부
+  - 큐레이션 이력: `memory/agents/_curation_log.md`
+  - `curator_app = App(root_agent=system_improvement_agent, name="curator")` 등록
+  - `adk web curator` 로 접근. "스킬 현황 보고해줘" / "[agent] 스킬 정리해줘" 지원
 
 ### 6-6. 에이전트 페르소나 추가 ✅ 완료 (2026-05-31)
 

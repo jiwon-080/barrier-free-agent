@@ -30,6 +30,7 @@ from .investment_agent import investment_agent
 from .pension_tax_agent import pension_tax_agent
 from .fraud_detection_agent import fraud_detection_agent
 from .customer_management_agent import customer_management_agent
+from .system_improvement_agent import system_improvement_agent
 
 os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "False")
 
@@ -180,4 +181,9 @@ app = App(
 admin_app = App(
     root_agent=customer_management_agent,
     name="admin",
+)
+
+curator_app = App(
+    root_agent=system_improvement_agent,
+    name="curator",
 )

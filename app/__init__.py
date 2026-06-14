@@ -16,6 +16,6 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-from .agent import app, root_agent, admin_app
+from .agent import app, root_agent, admin_app, curator_app
 
-__all__ = ["app", "root_agent", "admin_app"]
+__all__ = ["app", "root_agent", "admin_app", "curator_app"]
