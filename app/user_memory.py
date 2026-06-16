@@ -56,6 +56,9 @@ def load_user_memory(user_id: str) -> dict:
     return result
 
 
+_STYLE_LABEL = {"brief": "간결하게", "detailed": "자세하게", "example": "예시 포함"}
+
+
 def save_user_memory(user_id: str, profile: dict) -> None:
     """memory/users/{user_id}.md에 프로필 저장. 의미 있는 데이터 없으면 no-op."""
     if _is_eval_user(user_id):
@@ -64,18 +67,21 @@ def save_user_memory(user_id: str, profile: dict) -> None:
     investment_profile = profile.get("investment_profile", "")
     literacy_level = profile.get("literacy_level", "")
     product_interests: list = profile.get("product_interests") or []
+    preferred_style = profile.get("preferred_style", "")
 
-    if not investment_profile and not literacy_level:
+    if not investment_profile and not literacy_level and not preferred_style:
         return
 
     MEMORY_DIR.mkdir(parents=True, exist_ok=True)
     interests_str = ", ".join(product_interests)
+    style_label = _STYLE_LABEL.get(preferred_style, "미설정")
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     content = f"""---
 investment_profile: {investment_profile or 'null'}
 literacy_level: {literacy_level or 'null'}
 product_interests: [{interests_str}]
+preferred_style: {preferred_style or 'null'}
 updated_at: {now}
 ---
 
@@ -84,6 +90,7 @@ updated_at: {now}
 | 투자성향 | {investment_profile or '미설정'} |
 | 금융이해도 | {literacy_level or '미설정'} |
 | 관심 상품 | {interests_str or '없음'} |
+| 답변 선호 | {style_label} |
 | 마지막 업데이트 | {now} |
 """
     (MEMORY_DIR / f"{user_id}.md").write_text(content, encoding="utf-8")
