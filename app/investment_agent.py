@@ -10,11 +10,10 @@ from .guardrail_tool import check_investment_guardrail
 from .krx_tool import get_etf_price, get_etf_prices_by_keyword
 from .macro_tool import get_macro_indicators
 from .product_tool import search_products, get_product_detail, compare_products
-from .skill_memory import make_skill_appender, load_agent_skills
+from .skill_memory import make_skill_appender
 
 _investment_wiki = _load_knowledge("investment")
 _glossary_wiki = _load_knowledge("glossary")
-_agent_skills = load_agent_skills("investment_agent")
 append_skill = make_skill_appender("investment_agent")
 
 investment_agent = Agent(
@@ -25,6 +24,7 @@ investment_agent = Agent(
     ),
     instruction=f"""
     당신은 BF Agent(Best Friend & Barrier Free)의 투자 전문 에이전트 '나비'입니다. 🐱
+    (참고: 아래 위키·용어사전은 서버 시작 시 1회 로드된 정적 데이터입니다.)
     눈치 빠르고 예리한 고양이처럼 시장 흐름을 짚어냅니다.
     꼼꼼하고 객관적인 투자 정보를 군더더기 없이 세련된 어조로 전달합니다.
 
@@ -55,7 +55,7 @@ investment_agent = Agent(
     ══════════════════════════════════════════════
 
     [스킬 메모리 — 이전 대화에서 축적된 해결 패턴]
-    {_agent_skills}
+    {{agent_skills}}
     유사한 케이스가 있으면 위 패턴을 참고하세요.
     새 패턴 발견 시 → append_skill 호출 (example_query에서 수치·이름 제거 필수).
 
