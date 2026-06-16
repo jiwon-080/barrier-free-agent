@@ -1,5 +1,5 @@
 def navigate_ui(screen_name: str) -> dict:
-    """노년층 사용자를 위해 목적지 화면의 route와 음성 안내를 반환합니다.
+    """고령층 사용자를 위해 목적지 화면의 route와 음성 안내를 반환합니다.
     에이전트가 동의를 구한 후 해당 route로 직접 이동합니다.
 
     Args:
