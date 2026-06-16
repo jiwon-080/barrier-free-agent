@@ -6,10 +6,9 @@ from google.adk.tools.agent_tool import AgentTool
 from .callbacks import _load_knowledge, _before_agent_callback, _after_agent_callback, _after_tool_callback
 from .simulation_agent import simulation_agent
 from .product_tool import get_irp_info, get_isa_info
-from .skill_memory import make_skill_appender, load_agent_skills
+from .skill_memory import make_skill_appender
 
 _pension_tax_wiki = _load_knowledge("pension_tax")
-_agent_skills = load_agent_skills("pension_tax_agent")
 append_skill = make_skill_appender("pension_tax_agent")
 
 pension_tax_agent = Agent(
@@ -30,7 +29,7 @@ pension_tax_agent = Agent(
     (위 정보가 있으면 불필요한 기초 질문을 생략하고 맞춤 안내를 제공하세요.)
 
     [스킬 메모리 — 이전 대화에서 축적된 해결 패턴]
-    {_agent_skills}
+    {{agent_skills}}
     유사한 케이스가 있으면 위 패턴을 참고하세요.
     새 패턴 발견 시 → append_skill 호출 (example_query에서 수치·이름 제거 필수).
 

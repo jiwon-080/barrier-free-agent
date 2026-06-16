@@ -67,23 +67,40 @@ def list_all_skills() -> dict:
     return {"agents": result, "total_entries": total}
 
 
+_MAX_SKILL_ENTRIES = 20
+
+
 def make_skill_appender(agent_name: str):
     """에이전트 전용 append_skill 도구를 생성합니다."""
 
     def append_skill(skill_summary: str, trigger: str = "", example_query: str = "") -> dict:
-        """새로운 해결 패턴을 발견했을 때 스킬 문서에 기록합니다.
+        """복잡한 케이스를 해결한 후 해당 패턴을 스킬 문서에 기록합니다.
 
-        아래 상황에서 호출하세요:
-        - 지식베이스에 없는 질문 유형을 처음 해결했을 때
-        - 도구 조합·라우팅에서 효과적인 패턴을 발견했을 때
-        - 사용자가 예상치 못한 방식으로 질문해 새로운 접근이 필요했을 때
+        **호출 조건 (아래 조건을 모두 만족해야 함):**
+        1. 해결에 2개 이상의 도구를 순차 사용했거나 다른 에이전트에 위임이 필요한 복잡한 케이스
+        2. 기존 스킬 메모리에 동일하거나 유사한 패턴이 없음
+        3. 이 패턴이 다른 사용자에게도 재활용 가치가 있음
+
+        **호출하지 않는 경우:**
+        - 지식베이스에서 바로 답을 찾은 단순 질문
+        - 기존 스킬과 내용이 90% 이상 동일한 패턴
+        - 특정 사용자 수치·상황에 종속된 1회성 계산 결과
 
         Args:
-            skill_summary: 해결 패턴 핵심 요약 (1-2문장)
-            trigger: 이 패턴이 발동되는 조건/키워드
-            example_query: 대표 질문 (수치·이름 등 개인정보 반드시 제거)
+            skill_summary: 해결 패턴 핵심 요약 (1-2문장, 개인정보 제거)
+            trigger: 이 패턴이 발동되는 조건 또는 키워드
+            example_query: 대표 질문 (수치·이름 등 개인정보 반드시 익명화)
         """
+        # 항목 수 초과 시 큐레이션 필요 알림
+        path = AGENTS_DIR / f"{agent_name}_skills.md"
+        if path.exists():
+            current = path.read_text(encoding="utf-8").count("\n## [")
+            if current >= _MAX_SKILL_ENTRIES:
+                return {
+                    "status": "skipped",
+                    "reason": f"스킬 항목이 {current}개로 상한({_MAX_SKILL_ENTRIES}개)에 도달했습니다. system_improvement_agent에게 큐레이션을 요청하세요.",
+                }
         return append_skill_entry(agent_name, skill_summary, trigger, example_query)
 
-    append_skill.__name__ = f"append_skill"
+    append_skill.__name__ = "append_skill"
     return append_skill

@@ -7,6 +7,7 @@ from google import genai
 from google.genai import types as genai_types
 
 from .user_memory import load_user_memory, save_user_memory
+from .skill_memory import load_agent_skills
 
 
 # ── 지식베이스 로더 ───────────────────────────────────────────────────────────
@@ -181,7 +182,12 @@ def _before_agent_callback(callback_context: CallbackContext):
                 callback_context.state["user:persona"] = persona
         callback_context.state[_SESSION_PERSONA_DETECTED] = True
 
-    # ── 3. user_profile_summary 구성 ─────────────────────────────────────────
+    # ── 3. 에이전트 스킬 메모리 동적 로드 ───────────────────────────────────
+    agent_name = callback_context.agent_name
+    skills = load_agent_skills(agent_name)
+    callback_context.state["agent_skills"] = skills if skills.strip() else "아직 축적된 스킬 없음."
+
+    # ── 4. user_profile_summary 구성 ─────────────────────────────────────────
     interests = list(callback_context.state.get("user:product_interests") or [])
     profile   = callback_context.state.get("user:investment_profile") or ""
     literacy  = callback_context.state.get("user:literacy_level") or ""
