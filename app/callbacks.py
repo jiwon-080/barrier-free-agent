@@ -92,6 +92,27 @@ _PERSONA_HINTS: dict[str, str] = {
 
 _VALID_PERSONAS = set(_PERSONA_HINTS.keys())
 
+# ── 답변 스타일 감지 ──────────────────────────────────────────────────────────
+_STYLE_KEYWORDS: dict[str, list[str]] = {
+    "brief":    ["간단히", "짧게", "요약해", "핵심만", "한 줄로", "간략히", "간단하게"],
+    "detailed": ["자세히", "상세히", "구체적으로", "더 설명", "풀어서", "자세하게"],
+    "example":  ["예시", "예를 들어", "사례로", "예시를", "예를들면"],
+}
+
+_STYLE_LABELS: dict[str, str] = {
+    "brief":    "간결하게 (핵심 위주)",
+    "detailed": "자세하게 (상세 설명)",
+    "example":  "예시 포함",
+}
+
+
+def _detect_style(user_message: str) -> str:
+    """발화에서 답변 스타일 선호를 감지. 감지 안 되면 빈 문자열."""
+    for style, keywords in _STYLE_KEYWORDS.items():
+        if any(kw in user_message for kw in keywords):
+            return style
+    return ""
+
 
 def _extract_user_text(callback_context: CallbackContext) -> str:
     """CallbackContext에서 현재 사용자 발화 텍스트를 추출."""
@@ -165,33 +186,45 @@ def _before_agent_callback(callback_context: CallbackContext):
     if not callback_context.state.get(_SESSION_MEMORY_LOADED):
         user_id = callback_context.user_id
         mem = load_user_memory(user_id)
-        if mem.get("investment_profile") and not callback_context.state.get("user:investment_profile"):
-            callback_context.state["user:investment_profile"] = mem["investment_profile"]
-        if mem.get("literacy_level") and not callback_context.state.get("user:literacy_level"):
-            callback_context.state["user:literacy_level"] = mem["literacy_level"]
+        for key, state_key in [
+            ("investment_profile", "user:investment_profile"),
+            ("literacy_level",     "user:literacy_level"),
+            ("preferred_style",    "user:preferred_style"),
+        ]:
+            if mem.get(key) and not callback_context.state.get(state_key):
+                callback_context.state[state_key] = mem[key]
         if mem.get("product_interests") and not callback_context.state.get("user:product_interests"):
             callback_context.state["user:product_interests"] = mem["product_interests"]
         callback_context.state[_SESSION_MEMORY_LOADED] = True
 
-    # ── 2. 페르소나 감지 (세션 최초 1회) ────────────────────────────────────
+    # ── 2. 현재 발화 추출 ────────────────────────────────────────────────────
+    user_msg = _extract_user_text(callback_context)
+
+    # ── 3. 페르소나 감지 (세션 최초 1회) ────────────────────────────────────
     if not callback_context.state.get(_SESSION_PERSONA_DETECTED):
-        user_msg = _extract_user_text(callback_context)
         if user_msg:
             persona = _detect_persona(user_msg)
             if persona:
                 callback_context.state["user:persona"] = persona
         callback_context.state[_SESSION_PERSONA_DETECTED] = True
 
-    # ── 3. 에이전트 스킬 메모리 동적 로드 ───────────────────────────────────
+    # ── 4. 답변 스타일 감지 (매 턴 — 사용자가 언제든 바꿀 수 있음) ───────────
+    if user_msg:
+        detected_style = _detect_style(user_msg)
+        if detected_style:
+            callback_context.state["user:preferred_style"] = detected_style
+
+    # ── 5. 에이전트 스킬 메모리 동적 로드 ───────────────────────────────────
     agent_name = callback_context.agent_name
     skills = load_agent_skills(agent_name)
     callback_context.state["agent_skills"] = skills if skills.strip() else "아직 축적된 스킬 없음."
 
-    # ── 4. user_profile_summary 구성 ─────────────────────────────────────────
+    # ── 6. user_profile_summary 구성 ─────────────────────────────────────────
     interests = list(callback_context.state.get("user:product_interests") or [])
     profile   = callback_context.state.get("user:investment_profile") or ""
     literacy  = callback_context.state.get("user:literacy_level") or ""
     persona   = callback_context.state.get("user:persona") or ""
+    style     = callback_context.state.get("user:preferred_style") or ""
 
     lines = []
     if persona and persona in _PERSONA_HINTS:
@@ -202,6 +235,8 @@ def _before_agent_callback(callback_context: CallbackContext):
         lines.append(f"- 금융이해도: {literacy}")
     if interests:
         lines.append(f"- 관심 상품: {', '.join(interests)}")
+    if style and style in _STYLE_LABELS:
+        lines.append(f"- 답변 선호: {_STYLE_LABELS[style]}")
 
     callback_context.state["user_profile_summary"] = (
         "\n".join(lines) if lines else "파악된 정보 없음"
@@ -213,15 +248,17 @@ def _after_agent_callback(callback_context: CallbackContext):
     if callback_context.state.get("user:memory_consent") == "declined":
         return None
 
-    user_id  = callback_context.user_id
-    profile  = callback_context.state.get("user:investment_profile") or ""
-    literacy = callback_context.state.get("user:literacy_level") or ""
+    user_id   = callback_context.user_id
+    profile   = callback_context.state.get("user:investment_profile") or ""
+    literacy  = callback_context.state.get("user:literacy_level") or ""
     interests = list(callback_context.state.get("user:product_interests") or [])
+    style     = callback_context.state.get("user:preferred_style") or ""
 
-    if profile or literacy:
+    if profile or literacy or style:
         save_user_memory(user_id, {
             "investment_profile": profile,
-            "literacy_level": literacy,
-            "product_interests": interests,
+            "literacy_level":     literacy,
+            "product_interests":  interests,
+            "preferred_style":    style,
         })
     return None
