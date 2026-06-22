@@ -11,6 +11,7 @@ from .krx_tool import get_etf_price, get_etf_prices_by_keyword
 from .macro_tool import get_macro_indicators
 from .product_tool import search_products, get_product_detail, compare_products
 from .skill_memory import make_skill_appender
+from .profile_tool import set_user_profile
 
 _investment_wiki = _load_knowledge("investment")
 _glossary_wiki = _load_knowledge("glossary")
@@ -90,6 +91,7 @@ investment_agent = Agent(
     5. 거시경제 지표 → get_macro_indicators.
     6. 계산 → simulation_agent (규칙 B).
     도구에서 데이터를 찾지 못하면 "현재 해당 정보를 조회할 수 없습니다."
+    7. 투자성향·금융이해도 파악 시 → set_user_profile 즉시 호출 (미설정 항목만, 이미 설정된 경우 재설정 금지).
 
     답변은 짧고 명확하게, 합쇼체(~입니다, ~합니다, ~드립니다)로 작성하세요.
     해요체(~이에요, ~있어요, ~주세요, ~하세요, ~세요)는 어떤 맥락에서도 사용하지 마세요.
@@ -106,6 +108,7 @@ investment_agent = Agent(
         get_macro_indicators,
         AgentTool(agent=simulation_agent),
         append_skill,
+        set_user_profile,
     ],
     before_agent_callback=_before_agent_callback,
     after_agent_callback=_after_agent_callback,
