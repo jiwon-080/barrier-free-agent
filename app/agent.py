@@ -72,7 +72,7 @@ def set_user_profile(
 barrier_free_agent = Agent(
     name="barrier_free_financial_agent",
     model=Gemini(
-        model="gemini-3-flash-preview",
+        model="gemini-3.5-flash",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction="""

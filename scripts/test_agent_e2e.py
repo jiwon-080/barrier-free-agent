@@ -41,7 +41,7 @@ def step1_api_connection():
 
     # 간단한 ping
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model="gemini-3.5-flash",
         contents="안녕하세요, 한 문장으로 짧게 답해주세요.",
     )
     print(f"\n[OK] 응답: {response.text.strip()[:100]}")

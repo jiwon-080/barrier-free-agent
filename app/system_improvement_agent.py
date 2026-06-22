@@ -112,7 +112,7 @@ def write_skill_file(agent_name: str, curated_content: str) -> dict:
 system_improvement_agent = Agent(
     name="system_improvement_agent",
     model=Gemini(
-        model="gemini-3-flash-preview",
+        model="gemini-3.5-flash",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction="""

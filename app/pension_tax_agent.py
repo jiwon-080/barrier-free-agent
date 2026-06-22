@@ -14,7 +14,7 @@ append_skill = make_skill_appender("pension_tax_agent")
 pension_tax_agent = Agent(
     name="pension_tax_agent",
     model=Gemini(
-        model="gemini-3-flash-preview",
+        model="gemini-3.5-flash",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction=f"""
