@@ -20,12 +20,11 @@ from google.adk.agents import Agent
 from google.adk.apps import App
 from google.adk.models import Gemini
 from google.genai import types
-from google.adk.tools.tool_context import ToolContext
-
 from .callbacks import _before_agent_callback, _after_agent_callback, _after_tool_callback
 from .navigation_tool import navigate_ui
 from .product_tool import get_isa_info, get_irp_info
 from .guardrail_tool import check_investment_guardrail
+from .profile_tool import set_user_profile
 from .investment_agent import investment_agent
 from .pension_tax_agent import pension_tax_agent
 from .fraud_detection_agent import fraud_detection_agent
@@ -42,30 +41,6 @@ def request_terms_analysis() -> dict:
     Returns: {"type": "terms_analysis"} -- UI가 약관 분석 화면을 표시합니다.
     """
     return {"type": "terms_analysis"}
-
-
-def set_user_profile(
-    tool_context: ToolContext,
-    investment_profile: str = "",
-    literacy_level: str = "",
-) -> dict:
-    """사용자의 투자성향 또는 금융이해도를 세션에 기록합니다.
-    사용자가 투자 성향이나 금융 지식 수준을 언급할 때 호출하세요.
-
-    Args:
-        investment_profile: 투자성향 유형 (금융소비자보호법 기준).
-            '위험회피형', '위험중립형', '위험선호형' 중 하나. 변경 없으면 빈 문자열.
-        literacy_level: 금융이해도 수준.
-            '기초', '일반', '전문가' 중 하나. 변경 없으면 빈 문자열.
-    """
-    recorded = {}
-    if investment_profile:
-        tool_context.state["user:investment_profile"] = investment_profile
-        recorded["investment_profile"] = investment_profile
-    if literacy_level:
-        tool_context.state["user:literacy_level"] = literacy_level
-        recorded["literacy_level"] = literacy_level
-    return {"status": "saved", "recorded": recorded}
 
 
 # ── 배리어프리 에이전트 정의 ──────────────────────────────────────────────────
@@ -126,13 +101,14 @@ barrier_free_agent = Agent(
     request_terms_analysis 호출 후 텍스트 응답: "IRP 상품설명서에서 위험 조항 위치를 표시합니다. 잠시 기다려 주십시오."
 
     아래 요청은 반드시 'investment_agent(나비)'에게 이전하세요.
-    - 금융 용어 설명 (예: "ETF가 뭔가요?", "세액공제 설명해줘")
+    - 금융 용어 설명 (예: "ETF가 뭔가요?", "인플레이션이 뭐예요?") — IRP·ISA·세액공제·퇴직연금은 pension_tax_agent로 이전
     - 투자 권유·상품 추천 검증
     - 예금·적금·펀드 상품 검색 및 비교
     - ETF 시세·등락률 조회
     - 기준금리·환율·물가 등 거시경제 지표
 
     아래 요청은 반드시 'pension_tax_agent(까치)'에게 이전하세요. (화면 이동 목적이 아닌 경우)
+    - IRP·ISA 개념·구조·종류·특징 설명 (예: "ISA가 뭔가요?", "IRP가 뭐예요?")
     - IRP·ISA 세부 세제 혜택 상담 (예: "IRP 세액공제 구체적으로 어떻게 돼요?", "ISA 절세 전략 알려줘")
     - 퇴직연금 절세 플래닝
 

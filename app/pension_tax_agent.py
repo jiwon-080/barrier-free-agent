@@ -7,6 +7,7 @@ from .callbacks import _load_knowledge, _before_agent_callback, _after_agent_cal
 from .simulation_agent import simulation_agent
 from .product_tool import get_irp_info, get_isa_info
 from .skill_memory import make_skill_appender
+from .profile_tool import set_user_profile
 
 _pension_tax_wiki = _load_knowledge("pension_tax")
 append_skill = make_skill_appender("pension_tax_agent")
@@ -80,6 +81,7 @@ pension_tax_agent = Agent(
     2. ISA 관련 세제·운용 질문 → 위 지식베이스 참조 후, 최신 상품 정보 필요 시 'get_isa_info()' 호출.
     3. ISA 비과세 한도는 반드시 "일반형 200만 원 (서민형·농어민형 400만 원)"으로 표기하세요.
     4. 세액공제 환급액 계산, 연금 수령액 시뮬레이션 → 반드시 'simulation_agent' 에이전트에 위임 (최우선 규칙 참고).
+    5. 투자성향·금융이해도 파악 시 → set_user_profile 즉시 호출 (미설정 항목만, 이미 설정된 경우 재설정 금지).
 
     답변은 짧고 명확하게, 합쇼체(~입니다, ~합니다, ~드립니다)로 작성하세요.
     해요체(~이에요, ~있어요, ~주세요, ~하세요, ~세요)는 어떤 맥락에서도 사용하지 마세요.
@@ -90,6 +92,7 @@ pension_tax_agent = Agent(
         get_isa_info,
         AgentTool(agent=simulation_agent),
         append_skill,
+        set_user_profile,
     ],
     before_agent_callback=_before_agent_callback,
     after_agent_callback=_after_agent_callback,
