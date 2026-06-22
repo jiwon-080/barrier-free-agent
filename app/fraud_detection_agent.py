@@ -13,7 +13,7 @@ append_skill = make_skill_appender("fraud_detection_agent")
 fraud_detection_agent = Agent(
     name="fraud_detection_agent",
     model=Gemini(
-        model="gemini-3-flash-preview",
+        model="gemini-3.5-flash",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction=f"""

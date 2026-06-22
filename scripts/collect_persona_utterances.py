@@ -258,7 +258,7 @@ def llm_select(candidates: list[dict], persona: str) -> list[dict]:
         )
         try:
             resp = client.models.generate_content(
-                model="gemini-3-flash-preview",
+                model="gemini-3.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(temperature=0.3),
             )

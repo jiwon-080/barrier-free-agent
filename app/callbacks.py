@@ -135,7 +135,7 @@ def _detect_persona(user_message: str) -> str:
             user_message=user_message[:300],
         )
         resp = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model="gemini-3.5-flash",
             contents=prompt,
             config=genai_types.GenerateContentConfig(temperature=0.0),
         )
