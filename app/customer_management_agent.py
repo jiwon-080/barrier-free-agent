@@ -132,7 +132,7 @@ def list_agent_skills() -> dict:
 customer_management_agent = Agent(
     name="customer_management_agent",
     model=Gemini(
-        model="gemini-3-flash-preview",
+        model="gemini-3.5-flash",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction="""
