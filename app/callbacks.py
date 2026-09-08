@@ -1,5 +1,4 @@
 # app/callbacks.py
-import json
 from pathlib import Path
 
 from google.adk.agents.callback_context import CallbackContext
@@ -19,29 +18,8 @@ def _load_knowledge(domain: str) -> str:
 
 
 # ── 페르소나 라우팅 ───────────────────────────────────────────────────────────
-_FEWSHOT_FILE = Path(__file__).parent.parent / "data" / "personas" / "few_shot_examples.json"
-
-def _build_fewshot_block() -> str:
-    """페르소나별 퓨샷 예시 블록을 모듈 로드 시 1회 구성."""
-    if not _FEWSHOT_FILE.exists():
-        return ""
-    examples: list[dict] = json.loads(_FEWSHOT_FILE.read_text(encoding="utf-8"))
-    by_persona: dict[str, list[str]] = {}
-    for ex in examples:
-        p = ex.get("persona", "")
-        if p:
-            by_persona.setdefault(p, []).append(ex.get("title", ""))
-    lines = []
-    for persona, titles in by_persona.items():
-        lines.append(f"[{persona}]")
-        for t in titles:
-            lines.append(f"  - {t}")
-    return "\n".join(lines)
-
-_FEWSHOT_BLOCK = _build_fewshot_block()
-
 _PERSONA_ROUTING_PROMPT = """\
-아래 퓨샷 예시를 참고해, 사용자 발화가 어떤 페르소나에 가장 가까운지 판단하세요.
+사용자 발화가 어떤 페르소나에 가장 가까운지 판단하세요.
 
 페르소나 기준:
 - 고령층: 60대 이상. 연금·은퇴·손주 언급, 맞춤법 어색하거나 짧은 구어체.
@@ -49,9 +27,6 @@ _PERSONA_ROUTING_PROMPT = """\
 - 주부: 남편·배우자·아이 중심. 가계 담당 여성 관점의 질문.
 - 직장인: 20~30대 근로자. 연말정산·퇴직금·월급·4대보험 언급.
 - 중장년: 40~50대. 노후 준비 시작, 보험 점검, 은퇴 준비 언급.
-
-퓨샷 예시:
-{fewshot_block}
 
 사용자 발화:
 "{user_message}"
@@ -125,13 +100,12 @@ def _extract_user_text(callback_context: CallbackContext) -> str:
 
 
 def _detect_persona(user_message: str) -> str:
-    """LLM 퓨샷으로 페르소나 감지. 실패 시 빈 문자열 반환."""
-    if not _FEWSHOT_BLOCK or not user_message:
+    """LLM으로 페르소나 감지. 실패 시 빈 문자열 반환."""
+    if not user_message:
         return ""
     try:
         client = genai.Client()
         prompt = _PERSONA_ROUTING_PROMPT.format(
-            fewshot_block=_FEWSHOT_BLOCK,
             user_message=user_message[:300],
         )
         resp = client.models.generate_content(

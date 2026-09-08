@@ -15,7 +15,7 @@
     ▼
 _before_agent_callback  (callbacks.py)
   ① 사용자 메모리 로드 — 투자성향·금융이해도·관심상품 (세션 최초 1회)
-  ② 페르소나 자동 감지 — LLM 퓨샷 분류 → 고령층/사회초년생/주부/직장인/중장년
+  ② 페르소나 자동 감지 — LLM 분류(기준 프롬프트) → 고령층/사회초년생/주부/직장인/중장년
   ③ 에이전트 스킬 메모리 동적 로드 → agent_skills 상태 주입
   ④ user_profile_summary 구성 (페르소나 힌트 + 투자성향 + 금융이해도)
     │
@@ -52,7 +52,7 @@ curator_app → system_improvement_agent   스킬 문서 큐레이션·중복 �
 
 ## 페르소나 라우팅
 
-첫 번째 발화에서 LLM이 퓨샷 예시(30개)를 참고해 페르소나를 자동 분류합니다.  
+첫 번째 발화에서 LLM이 페르소나 기준 프롬프트(`_PERSONA_ROUTING_PROMPT`)를 참고해 페르소나를 자동 분류합니다.  
 분류 결과는 `user:persona` 상태에 저장되고, `user_profile_summary`를 통해 에이전트 안내 방식에 반영됩니다.
 
 | 페르소나 | 감지 기준 | 안내 조정 |
@@ -63,8 +63,7 @@ curator_app → system_improvement_agent   스킬 문서 큐레이션·중복 �
 | 직장인 | 연말정산·4대보험·퇴직금 | 근로소득 절세 중심 |
 | 중장년 | 40~50대, 노후 준비 시작 | 은퇴 기간 고려 플랜 |
 
-퓨샷 데이터: `data/personas/few_shot_examples.json` (고령층 10개, 나머지 각 5개)  
-수집 파이프라인: `scripts/collect_persona_utterances.py --persona 고령층 | --all`
+분류 기준은 `app/callbacks.py`의 `_PERSONA_ROUTING_PROMPT`에 페르소나별 특성으로 정의돼 있습니다.
 
 ---
 
@@ -119,7 +118,7 @@ barrier-free-agent/
 │   │   ├── test_guardrail.py         금소법 가드레일 (5케이스)
 │   │   ├── test_navigation.py        화면 이동 라우팅 (5케이스)
 │   │   ├── test_literacy.py          금융 용어 검색 (5케이스)
-│   │   ├── test_persona_routing.py   페르소나 감지·퓨샷 블록 (12케이스)
+│   │   ├── test_persona_routing.py   페르소나 감지 (9케이스)
 │   │   └── test_skill_memory.py      스킬 메모리 CRUD·상한 (8케이스)
 │   ├── integration/
 │   │   └── test_agent.py             에이전트 스트리밍 통합 테스트
@@ -137,8 +136,6 @@ barrier-free-agent/
 │   │   ├── investment/               ETF투자가이드, 예금적금비교, 채권, 투자성향, 펀드
 │   │   ├── pension_tax/              IRP, ISA, 세액공제, 퇴직연금, 소비자권리
 │   │   └── fraud/                    사기 유형 8종 + 예방수칙 + 피해시대처
-│   ├── personas/
-│   │   └── few_shot_examples.json    페르소나 퓨샷 예시 30개
 │   └── source/                       원본 공공데이터 및 수집 스크립트
 │
 ├── memory/
@@ -146,7 +143,6 @@ barrier-free-agent/
 │   └── agents/                       에이전트별 스킬 누적 파일
 │
 ├── scripts/
-│   ├── collect_persona_utterances.py 퓨샷 예시 수집 파이프라인
 │   └── show_eval_results.py          eval 결과 뷰어
 │
 ├── md/

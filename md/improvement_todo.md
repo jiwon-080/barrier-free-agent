@@ -45,15 +45,12 @@
   - `ui/demo.py`: 최초 방문 시 동의 배너, 💾/👤 뱃지, 기억 초기화 버튼 구현
   - 백엔드: `user:memory_consent` declined 시 저장 스킵
 
-### 1-3. 페르소나별 실제 발화 데이터셋 + few-shot 라우팅 레이어 (현직자 조언 반영)
+### 1-3. 페르소나 라우팅 레이어
 
-> ❌ Nemotron-Personas-Korea 폐기 — 합성 데이터로 실제 금융 발화와 무관. 실제 소스에서 수집.
-
-**수집 경로**
-- 네이버 지식인 금융 카테고리 (IRP, ISA, 연금, 예금 검색 결과)
-- 네이버 카페 (노후준비, 주부재테크, 시니어재테크)
-- 유튜브 댓글 — 금융사 공식 채널 고령자 시청 비율 높은 영상
-- 금융감독원 금융소비자포털 상담 사례 공개분
+> ❌ Nemotron-Personas-Korea 폐기 — 합성 데이터로 실제 금융 발화와 무관.
+> ❌ 네이버 지식iN/카페/유튜브 수집 퓨샷 폐기 — 검색 오픈API 약관(결과물 저장·재배포·AI 입력 활용 금지) 및
+>    게시물 저작권 위반. `scripts/collect_persona_utterances.py`·`data/personas/few_shot_examples.json` 제거.
+> ✅ 대체: `_PERSONA_ROUTING_PROMPT`에 페르소나별 특성을 기준으로 기술한 프롬프트만으로 LLM 분류.
 
 **페르소나 타입 및 발화 특징**
 - 노년층: "이거 어떻게 하는건가요", "제가 잘 몰라서요", "은행가면 되나요"
@@ -61,10 +58,8 @@
 - 직장인: "연말정산 때", "한도 다 채우려면", "DC형이랑 DB형 차이가"
 
 **구현**
-- [ ] 페르소나별 실제 발화 20~30개씩 수집 및 정제
-- [ ] 수집된 발화 기반 few-shot 예시 작성 (`data/personas/` 또는 instruction 직접 삽입)
-- [ ] `_before_agent_callback` 앞단에 few-shot 라우팅 레이어 추가
-  - 발화 패턴 → persona_type 판단 → 응답 스타일 가이드 주입
+- [x] `_before_agent_callback` 앞단에 페르소나 라우팅 레이어 추가
+  - 발화 → `_PERSONA_ROUTING_PROMPT`(페르소나별 특성 기준) → persona_type 판단 → `_PERSONA_HINTS` 주입
 
 ---
 
