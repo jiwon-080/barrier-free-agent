@@ -1,7 +1,10 @@
 **/.obsidian/
 app/.adk/
 data/images/
-data/source/documents/
+# 원본 외부 데이터셋 전체 무시 (AI Hub 등 재배포 금지). 스크립트·가공 결과만 예외로 추적.
+data/source/*
+!data/source/scripts/
+!data/source/fss_product.json
 memory/users/
 .claude/
 .adk/
