@@ -5,6 +5,8 @@ data/images/
 data/source/*
 !data/source/scripts/
 !data/source/fss_product.json
+# AI Hub 파생 페르소나 few-shot — 이용정책 확인 전까지 로컬 전용, 커밋 금지
+data/personas/
 memory/users/
 .claude/
 .adk/

@@ -15,7 +15,7 @@
     ▼
 _before_agent_callback  (callbacks.py)
   ① 사용자 메모리 로드 — 투자성향·금융이해도·관심상품 (세션 최초 1회)
-  ② 페르소나 자동 감지 — LLM 분류(기준 프롬프트) → 고령층/사회초년생/주부/직장인/중장년
+  ② 페르소나 자동 감지 — LLM 분류(기준 프롬프트+퓨샷) → 고령층/사회초년생/직장인/중장년
   ③ 에이전트 스킬 메모리 동적 로드 → agent_skills 상태 주입
   ④ user_profile_summary 구성 (페르소나 힌트 + 투자성향 + 금융이해도)
     │
@@ -52,18 +52,26 @@ curator_app → system_improvement_agent   스킬 문서 큐레이션·중복 �
 
 ## 페르소나 라우팅
 
-첫 번째 발화에서 LLM이 페르소나 기준 프롬프트(`_PERSONA_ROUTING_PROMPT`)를 참고해 페르소나를 자동 분류합니다.  
+첫 번째 발화에서 LLM이 페르소나 기준 프롬프트(`_PERSONA_ROUTING_PROMPT`) + 퓨샷 예시를 참고해 페르소나를 자동 분류합니다.  
 분류 결과는 `user:persona` 상태에 저장되고, `user_profile_summary`를 통해 에이전트 안내 방식에 반영됩니다.
 
 | 페르소나 | 감지 기준 | 안내 조정 |
 |---------|---------|---------|
 | 고령층 | 60대+, 구어체, 연금·손주 언급 | 쉬운 단어, 큰글 모드 안내 |
 | 사회초년생 | 20대, 알바·주린이·청년 상품 | 기초 개념, 청년 전용 상품 우선 |
-| 주부 | 배우자·자녀·가계 담당 | 가계 관점, 배우자 공제 안내 |
 | 직장인 | 연말정산·4대보험·퇴직금 | 근로소득 절세 중심 |
 | 중장년 | 40~50대, 노후 준비 시작 | 은퇴 기간 고려 플랜 |
 
-분류 기준은 `app/callbacks.py`의 `_PERSONA_ROUTING_PROMPT`에 페르소나별 특성으로 정의돼 있습니다.
+분류 기준은 `app/callbacks.py`의 `_PERSONA_ROUTING_PROMPT`에 페르소나별 특성으로 정의돼 있습니다.  
+"주부"는 이전 버전에 있었으나, 근거로 쓰던 네이버 지식iN 수집 데이터가 API 약관 위반으로 제거되며 함께 빠졌습니다
+(대체용 AI Hub 데이터엔 주부를 식별할 필드가 없음).
+
+**퓨샷 예시**: `data/source/`의 AI Hub "금융분야 고객상담 데이터"(NIA, 은행 상담 전화 텍스트)에서
+`client_age`로 연령대를 근사해 페르소나를 매기고, `scripts/build_persona_examples_aihub.py`로 실제
+고객 발화(RX 턴)를 무작위 샘플링합니다 — LLM이 "말투가 그럴듯한 것"을 고르게 하면 고정관념을 강화하는
+선별 편향이 생길 수 있어 규칙 기반(정규식 추출 + 무작위 샘플링)만 씁니다.
+산출물(`data/personas/few_shot_examples.json`)은 AI Hub 이용정책 확인 전까지 `.gitignore` 처리되어
+로컬에만 존재하며 저장소에는 커밋되지 않습니다 — 파일이 없으면 프롬프트 기준만으로 동작합니다.
 
 ---
 
@@ -118,7 +126,7 @@ barrier-free-agent/
 │   │   ├── test_guardrail.py         금소법 가드레일 (5케이스)
 │   │   ├── test_navigation.py        화면 이동 라우팅 (5케이스)
 │   │   ├── test_literacy.py          금융 용어 검색 (5케이스)
-│   │   ├── test_persona_routing.py   페르소나 감지 (9케이스)
+│   │   ├── test_persona_routing.py   페르소나 감지·퓨샷 블록 (10케이스)
 │   │   └── test_skill_memory.py      스킬 메모리 CRUD·상한 (8케이스)
 │   ├── integration/
 │   │   └── test_agent.py             에이전트 스트리밍 통합 테스트
@@ -136,13 +144,15 @@ barrier-free-agent/
 │   │   ├── investment/               ETF투자가이드, 예금적금비교, 채권, 투자성향, 펀드
 │   │   ├── pension_tax/              IRP, ISA, 세액공제, 퇴직연금, 소비자권리
 │   │   └── fraud/                    사기 유형 8종 + 예방수칙 + 피해시대처
-│   └── source/                       원본 공공데이터 및 수집 스크립트
+│   ├── source/                       원본 공공데이터 및 수집 스크립트 (gitignore)
+│   └── personas/                     페르소나 퓨샷 예시 (AI Hub 파생, gitignore — 로컬 전용)
 │
 ├── memory/
 │   ├── users/                        사용자별 프로필 파일
 │   └── agents/                       에이전트별 스킬 누적 파일
 │
 ├── scripts/
+│   ├── build_persona_examples_aihub.py  AI Hub 은행상담 데이터 → 페르소나 퓨샷 생성
 │   └── show_eval_results.py          eval 결과 뷰어
 │
 ├── md/

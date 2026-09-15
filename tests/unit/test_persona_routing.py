@@ -7,6 +7,25 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 import app.callbacks as cb
 
 
+# ── _build_fewshot_block ──────────────────────────────────────────────────────
+
+def test_fewshot_block_empty_when_file_missing(tmp_path):
+    with patch.object(cb, "_FEWSHOT_FILE", tmp_path / "nonexistent.json"):
+        result = cb._build_fewshot_block()
+    assert result == ""
+
+
+def test_fewshot_block_format(tmp_path):
+    """페르소나별 발화가 들여쓰기(  - )로 목록화돼야 한다."""
+    fake = '[{"persona": "직장인", "utterance": "연말정산 환급금 알고 싶어요"}]'
+    fake_file = tmp_path / "few_shot_examples.json"
+    fake_file.write_text(fake, encoding="utf-8")
+    with patch.object(cb, "_FEWSHOT_FILE", fake_file):
+        result = cb._build_fewshot_block()
+    assert "[직장인]" in result
+    assert "  - 연말정산 환급금 알고 싶어요" in result
+
+
 # ── _detect_persona ───────────────────────────────────────────────────────────
 
 def _mock_llm(response_text: str):
@@ -70,8 +89,9 @@ def test_detect_persona_strips_quotes():
 # ── 상수 검증 ─────────────────────────────────────────────────────────────────
 
 def test_valid_personas_set():
-    """_VALID_PERSONAS 집합이 5개 페르소나를 모두 포함해야 한다."""
-    expected = {"고령층", "사회초년생", "주부", "직장인", "중장년"}
+    """_VALID_PERSONAS 집합이 4개 페르소나를 모두 포함해야 한다 (주부는 AI Hub 데이터에
+    식별 필드가 없어 제외)."""
+    expected = {"고령층", "사회초년생", "직장인", "중장년"}
     assert cb._VALID_PERSONAS == expected
 
 

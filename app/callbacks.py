@@ -1,4 +1,5 @@
 # app/callbacks.py
+import json
 from pathlib import Path
 
 from google.adk.agents.callback_context import CallbackContext
@@ -18,22 +19,47 @@ def _load_knowledge(domain: str) -> str:
 
 
 # ── 페르소나 라우팅 ───────────────────────────────────────────────────────────
+# 퓨샷 예시: AI Hub "금융분야 고객상담 데이터"(NIA, 은행)에서 연령대로 근사 추출
+# (scripts/build_persona_examples_aihub.py). 이용정책 확인 전까지 산출물은
+# data/personas/에 .gitignore 처리 — 커밋 금지, 파일 없으면 프롬프트 기준만 사용.
+_FEWSHOT_FILE = Path(__file__).parent.parent / "data" / "personas" / "few_shot_examples.json"
+
+
+def _build_fewshot_block() -> str:
+    """페르소나별 퓨샷 발화 블록을 모듈 로드 시 1회 구성. 파일 없으면 빈 문자열."""
+    if not _FEWSHOT_FILE.exists():
+        return ""
+    examples: list[dict] = json.loads(_FEWSHOT_FILE.read_text(encoding="utf-8"))
+    by_persona: dict[str, list[str]] = {}
+    for ex in examples:
+        p = ex.get("persona", "")
+        if p:
+            by_persona.setdefault(p, []).append(ex.get("utterance", ""))
+    lines = []
+    for persona, utterances in by_persona.items():
+        lines.append(f"[{persona}]")
+        for u in utterances:
+            lines.append(f"  - {u}")
+    return "\n".join(lines)
+
+
+_FEWSHOT_BLOCK = _build_fewshot_block()
+
 _PERSONA_ROUTING_PROMPT = """\
 사용자 발화가 어떤 페르소나에 가장 가까운지 판단하세요.
 
 페르소나 기준:
 - 고령층: 60대 이상. 연금·은퇴·손주 언급, 맞춤법 어색하거나 짧은 구어체.
 - 사회초년생: 20대 초중반. 알바·청년 상품·주린이·처음이라는 표현.
-- 주부: 남편·배우자·아이 중심. 가계 담당 여성 관점의 질문.
 - 직장인: 20~30대 근로자. 연말정산·퇴직금·월급·4대보험 언급.
 - 중장년: 40~50대. 노후 준비 시작, 보험 점검, 은퇴 준비 언급.
-
+{fewshot_section}
 사용자 발화:
 "{user_message}"
 
 위 발화의 페르소나를 다음 선택지 중 하나만 답하세요.
 어떤 페르소나에도 명확히 속하지 않으면 "모름"으로 답하세요.
-선택지: 고령층 / 사회초년생 / 주부 / 직장인 / 중장년 / 모름
+선택지: 고령층 / 사회초년생 / 직장인 / 중장년 / 모름
 
 답변 (선택지 하나만):"""
 
@@ -48,11 +74,6 @@ _PERSONA_HINTS: dict[str, str] = {
         "- 추정 페르소나: 사회초년생\n"
         "- 기초 개념부터 친절하게 설명하세요.\n"
         "- 청년도약계좌·청년형 ISA 등 청년 전용 상품을 적극 안내하세요."
-    ),
-    "주부": (
-        "- 추정 페르소나: 주부\n"
-        "- 가계 전체 관점에서 안내하세요.\n"
-        "- 배우자·자녀 관련 소득공제·보험·청약 질문에 익숙하게 대응하세요."
     ),
     "직장인": (
         "- 추정 페르소나: 직장인\n"
@@ -105,7 +126,9 @@ def _detect_persona(user_message: str) -> str:
         return ""
     try:
         client = genai.Client()
+        fewshot_section = f"\n실제 발화 예시:\n{_FEWSHOT_BLOCK}\n" if _FEWSHOT_BLOCK else ""
         prompt = _PERSONA_ROUTING_PROMPT.format(
+            fewshot_section=fewshot_section,
             user_message=user_message[:300],
         )
         resp = client.models.generate_content(
