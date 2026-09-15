@@ -37,14 +37,14 @@ test:
 # ==============================================================================
 
 # Run agent evaluation using ADK eval
-# Usage: make eval [EVALSET=navigation|investment|pension_tax] [EVAL_CONFIG=...]
-# Default evalset: navigation
+# Usage: make eval [EVALSET=investment|pension_tax|fraud|compliance] [EVAL_CONFIG=...]
+# Default evalset: investment
 eval:
 	@echo "==============================================================================="
 	@echo "| Running Agent Evaluation                                                    |"
 	@echo "==============================================================================="
 	uv sync --dev --extra eval
-	uv run adk eval ./app $${EVALSET:-tests/eval/evalsets/navigation.evalset.json} \
+	uv run adk eval ./app $${EVALSET:-tests/eval/evalsets/investment.evalset.json} \
 		$(if $(EVAL_CONFIG),--config_file_path=$(EVAL_CONFIG),$(if $(wildcard tests/eval/eval_config.json),--config_file_path=tests/eval/eval_config.json,))
 
 # Run evaluation with all evalsets (navigation + investment + pension_tax)
